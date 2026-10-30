@@ -1,0 +1,568 @@
+openapi: 3.0.3
+info:
+  title: Course Manager API
+  version: 1.0.0
+  description: |
+    REST API for managing online courses, modules, contents (lessons) and users,
+    plus reports and lesson watch tracking.
+
+    Conventions:
+    - JSON in/out, `snake_case` fields.
+    - Lists are paginated with `page` and `limit` and return `{ data, meta }`.
+    - `PUT` replaces all editable fields, `PATCH` updates only the fields sent.
+    - Errors return `{ error: { status, message, details? } }`.
+servers:
+  - url: /api
+    description: Current host
+tags:
+  - name: Users
+  - name: Courses
+  - name: Modules
+  - name: Contents
+  - name: Content views
+    description: Tracks which users watched each content (lesson)
+  - name: Reports
+  - name: Health
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Health check
+      responses:
+        '200':
+          description: API is up
+          content:
+            application/json:
+              schema: { type: object, properties: { status: { type: string, example: ok } } }
+
+  /users:
+    get:
+      tags: [Users]
+      summary: List users
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/search'
+        - { name: status, in: query, schema: { $ref: '#/components/schemas/UserStatus' } }
+      responses:
+        '200':
+          description: Paginated users
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserList' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+    post:
+      tags: [Users]
+      summary: Create a user
+      requestBody: { $ref: '#/components/requestBodies/User' }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/User' } } } }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /users/{id}:
+    parameters: [{ $ref: '#/components/parameters/id' }]
+    get:
+      tags: [Users]
+      summary: Get a user
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/User' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Users]
+      summary: Replace a user
+      requestBody: { $ref: '#/components/requestBodies/User' }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/User' } } } }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+    patch:
+      tags: [Users]
+      summary: Partially update a user
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/UserInput' } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/User' } } } }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Users]
+      summary: Delete a user
+      description: Fails with 409 while the user still owns courses or modules.
+      responses:
+        '204': { description: Deleted }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /courses:
+    get:
+      tags: [Courses]
+      summary: List courses
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/search'
+        - { name: user_id, in: query, schema: { type: integer }, description: Filter by author }
+      responses:
+        '200': { description: Paginated courses, content: { application/json: { schema: { $ref: '#/components/schemas/CourseList' } } } }
+        '400': { $ref: '#/components/responses/ValidationError' }
+    post:
+      tags: [Courses]
+      summary: Create a course
+      requestBody: { $ref: '#/components/requestBodies/Course' }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Course' } } } }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /courses/{id}:
+    parameters: [{ $ref: '#/components/parameters/id' }]
+    get:
+      tags: [Courses]
+      summary: Get a course
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Course' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Courses]
+      summary: Replace a course
+      requestBody: { $ref: '#/components/requestBodies/Course' }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Course' } } } }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+    patch:
+      tags: [Courses]
+      summary: Partially update a course
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/CourseInput' } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Course' } } } }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Courses]
+      summary: Delete a course (cascades to its modules and contents)
+      responses:
+        '204': { description: Deleted }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /modules:
+    get:
+      tags: [Modules]
+      summary: List modules
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/search'
+        - { name: course_id, in: query, schema: { type: integer } }
+        - { name: user_id, in: query, schema: { type: integer } }
+      responses:
+        '200': { description: Paginated modules, content: { application/json: { schema: { $ref: '#/components/schemas/ModuleList' } } } }
+        '400': { $ref: '#/components/responses/ValidationError' }
+    post:
+      tags: [Modules]
+      summary: Create a module
+      requestBody: { $ref: '#/components/requestBodies/Module' }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Module' } } } }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /modules/{id}:
+    parameters: [{ $ref: '#/components/parameters/id' }]
+    get:
+      tags: [Modules]
+      summary: Get a module
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Module' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Modules]
+      summary: Replace a module
+      requestBody: { $ref: '#/components/requestBodies/Module' }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Module' } } } }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+    patch:
+      tags: [Modules]
+      summary: Partially update a module
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ModuleInput' } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Module' } } } }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Modules]
+      summary: Delete a module (cascades to its contents)
+      responses:
+        '204': { description: Deleted }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /contents:
+    get:
+      tags: [Contents]
+      summary: List contents
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/search'
+        - { name: module_id, in: query, schema: { type: integer } }
+        - { name: course_id, in: query, schema: { type: integer } }
+      responses:
+        '200': { description: Paginated contents, content: { application/json: { schema: { $ref: '#/components/schemas/ContentList' } } } }
+        '400': { $ref: '#/components/responses/ValidationError' }
+    post:
+      tags: [Contents]
+      summary: Create a content
+      requestBody: { $ref: '#/components/requestBodies/Content' }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Content' } } } }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /contents/{id}:
+    parameters: [{ $ref: '#/components/parameters/id' }]
+    get:
+      tags: [Contents]
+      summary: Get a content
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Content' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Contents]
+      summary: Replace a content
+      requestBody: { $ref: '#/components/requestBodies/Content' }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Content' } } } }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+    patch:
+      tags: [Contents]
+      summary: Partially update a content
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ContentInput' } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Content' } } } }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Contents]
+      summary: Delete a content
+      responses:
+        '204': { description: Deleted }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /contents/{id}/views:
+    parameters: [{ $ref: '#/components/parameters/id' }]
+    get:
+      tags: [Content views]
+      summary: List users who watched the content
+      responses:
+        '200':
+          description: Viewers
+          content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Viewer' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [Content views]
+      summary: Mark the content as watched by a user (idempotent)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id]
+              properties: { user_id: { type: integer, example: 2 } }
+      responses:
+        '201':
+          description: Registered
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: integer }
+                  user_id: { type: integer }
+                  content_id: { type: integer }
+                  watched_at: { type: string, format: date-time }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /contents/{id}/views/{userId}:
+    parameters:
+      - $ref: '#/components/parameters/id'
+      - { name: userId, in: path, required: true, schema: { type: integer } }
+    delete:
+      tags: [Content views]
+      summary: Remove the watched mark of a user
+      responses:
+        '204': { description: Removed }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /reports/users-most-courses:
+    get:
+      tags: [Reports]
+      summary: SQL 01 - Users ranked by number of courses
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id: { type: integer }
+                    name: { type: string }
+                    email: { type: string }
+                    total_courses: { type: integer }
+  /reports/course-most-contents:
+    get:
+      tags: [Reports]
+      summary: SQL 02 - Course(s) with the most contents (ties included)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id: { type: integer }
+                    code: { type: string }
+                    title: { type: string }
+                    total_contents: { type: integer }
+  /reports/courses-summary:
+    get:
+      tags: [Reports]
+      summary: SQL 03 - Courses with total of modules and contents
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id: { type: integer }
+                    code: { type: string }
+                    title: { type: string }
+                    total_modules: { type: integer }
+                    total_contents: { type: integer }
+  /reports/contents-with-course:
+    get:
+      tags: [Reports]
+      summary: SQL 04 - Contents with their course name
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id: { type: integer }
+                    content_title: { type: string }
+                    module_id: { type: integer }
+                    module_title: { type: string }
+                    course_id: { type: integer }
+                    course_title: { type: string }
+  /reports/content-viewers/{id}:
+    get:
+      tags: [Reports]
+      summary: SQL 05 - Users who watched a content (e.g. id = 2)
+      parameters: [{ $ref: '#/components/parameters/id' }]
+      responses:
+        '200':
+          description: OK
+          content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Viewer' } } } }
+
+components:
+  parameters:
+    id: { name: id, in: path, required: true, schema: { type: integer, minimum: 1 } }
+    page: { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+    limit: { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+    search: { name: search, in: query, schema: { type: string }, description: Case-insensitive text search }
+
+  requestBodies:
+    User:
+      required: true
+      content:
+        application/json:
+          schema:
+            allOf: [{ $ref: '#/components/schemas/UserInput' }]
+            required: [name, email]
+    Course:
+      required: true
+      content:
+        application/json:
+          schema:
+            allOf: [{ $ref: '#/components/schemas/CourseInput' }]
+            required: [code, title, user_id]
+    Module:
+      required: true
+      content:
+        application/json:
+          schema:
+            allOf: [{ $ref: '#/components/schemas/ModuleInput' }]
+            required: [course_id, user_id, title]
+    Content:
+      required: true
+      content:
+        application/json:
+          schema:
+            allOf: [{ $ref: '#/components/schemas/ContentInput' }]
+            required: [module_id, title, content]
+
+  responses:
+    NotFound:
+      description: Resource not found
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    ValidationError:
+      description: Invalid input
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    Conflict:
+      description: Unique or foreign key constraint violated
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+
+  schemas:
+    Timestamps:
+      type: object
+      properties:
+        created_at: { type: string, format: date-time, readOnly: true }
+        updated_at: { type: string, format: date-time, readOnly: true }
+    Meta:
+      type: object
+      properties:
+        page: { type: integer, example: 1 }
+        limit: { type: integer, example: 20 }
+        total: { type: integer, example: 5 }
+        total_pages: { type: integer, example: 1 }
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            status: { type: integer, example: 400 }
+            message: { type: string, example: Validation failed }
+            details:
+              oneOf:
+                - type: array
+                  items:
+                    type: object
+                    properties: { field: { type: string }, message: { type: string } }
+                - type: object
+
+    UserStatus: { type: string, enum: [active, inactive] }
+    UserInput:
+      type: object
+      properties:
+        name: { type: string, minLength: 2, maxLength: 120, example: Jane Doe }
+        email: { type: string, format: email, example: jane@example.com }
+        status: { $ref: '#/components/schemas/UserStatus' }
+    User:
+      allOf:
+        - type: object
+          properties:
+            id: { type: integer, example: 1 }
+            courses_count: { type: integer, readOnly: true }
+        - $ref: '#/components/schemas/UserInput'
+        - $ref: '#/components/schemas/Timestamps'
+    UserList:
+      type: object
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/User' } }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    CourseInput:
+      type: object
+      properties:
+        code: { type: string, maxLength: 30, example: NODE-201, description: Unique code (stored uppercase) }
+        title: { type: string, maxLength: 150, example: Advanced Node.js }
+        description: { type: string, nullable: true }
+        user_id: { type: integer, example: 1, description: User who created the course }
+    Course:
+      allOf:
+        - type: object
+          properties:
+            id: { type: integer }
+            user_name: { type: string, readOnly: true }
+            modules_count: { type: integer, readOnly: true }
+            contents_count: { type: integer, readOnly: true }
+        - $ref: '#/components/schemas/CourseInput'
+        - $ref: '#/components/schemas/Timestamps'
+    CourseList:
+      type: object
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/Course' } }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    ModuleInput:
+      type: object
+      properties:
+        course_id: { type: integer, example: 1 }
+        user_id: { type: integer, example: 1, description: User who created the module }
+        title: { type: string, maxLength: 150, example: Streams and Buffers }
+        description: { type: string, nullable: true }
+    Module:
+      allOf:
+        - type: object
+          properties:
+            id: { type: integer }
+            course_title: { type: string, readOnly: true }
+            user_name: { type: string, readOnly: true }
+            contents_count: { type: integer, readOnly: true }
+        - $ref: '#/components/schemas/ModuleInput'
+        - $ref: '#/components/schemas/Timestamps'
+    ModuleList:
+      type: object
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/Module' } }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    ContentInput:
+      type: object
+      properties:
+        module_id: { type: integer, example: 1 }
+        title: { type: string, maxLength: 150, example: Readable streams }
+        content: { type: string, example: Lesson body, video URL or markdown. }
+    Content:
+      allOf:
+        - type: object
+          properties:
+            id: { type: integer }
+            module_title: { type: string, readOnly: true }
+            course_id: { type: integer, readOnly: true }
+            course_title: { type: string, readOnly: true }
+            views_count: { type: integer, readOnly: true }
+        - $ref: '#/components/schemas/ContentInput'
+        - $ref: '#/components/schemas/Timestamps'
+    ContentList:
+      type: object
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/Content' } }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    Viewer:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        email: { type: string }
+        watched_at: { type: string, format: date-time }

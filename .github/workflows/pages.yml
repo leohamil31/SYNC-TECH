@@ -1,0 +1,54 @@
+name: Deploy GitHub Pages (static demo)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Build React app in demo mode (API simulated in the browser)
+        working-directory: frontend
+        env:
+          VITE_DEMO: 'true'
+          VITE_BASE: /${{ github.event.repository.name }}/
+        run: |
+          npm ci
+          npm run build
+      - name: Add SPA fallback and Swagger docs
+        run: |
+          cp frontend/dist/index.html frontend/dist/404.html
+          mkdir -p frontend/dist/swagger
+          cp docs/swagger/index.html frontend/dist/swagger/index.html
+          cp backend/src/docs/openapi.yaml frontend/dist/swagger/openapi.yaml
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: frontend/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
