@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { listAll } from '../api/client';
+import { useI18n } from '../i18n';
 
 /**
  * Form driven by a field definition list:
@@ -7,6 +8,7 @@ import { listAll } from '../api/client';
  * `optionsFrom` loads <select> options from another API resource.
  */
 export default function ResourceForm({ fields, initialValues, onSubmit, onCancel, submitting, errors = {} }) {
+  const { t } = useI18n();
   const [values, setValues] = useState(() =>
     Object.fromEntries(fields.map((f) => [f.name, initialValues?.[f.name] ?? f.defaultValue ?? ''])),
   );
@@ -51,7 +53,7 @@ export default function ResourceForm({ fields, initialValues, onSubmit, onCancel
             {f.type === 'textarea' && <textarea rows={f.rows || 4} {...common} />}
             {f.type === 'select' && (
               <select {...common}>
-                <option value="">Select…</option>
+                <option value="">{t('common.select')}</option>
                 {fieldOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
             )}
@@ -61,9 +63,9 @@ export default function ResourceForm({ fields, initialValues, onSubmit, onCancel
         );
       })}
       <div className="form-actions">
-        <button type="button" className="btn" onClick={onCancel}>Cancel</button>
+        <button type="button" className="btn" onClick={onCancel}>{t('actions.cancel')}</button>
         <button type="submit" className="btn btn-primary" disabled={submitting}>
-          {submitting ? 'Saving…' : 'Save'}
+          {submitting ? t('actions.saving') : t('actions.save')}
         </button>
       </div>
     </form>

@@ -1,19 +1,21 @@
 import { resetDemoData } from '../api/mock';
+import { useI18n } from '../i18n';
+import Icon from './Icon';
 
 export default function DemoBanner() {
+  const { t } = useI18n();
   const reset = () => {
-    if (!window.confirm('Restore the original seed data?')) return;
+    if (!window.confirm(t('messages.confirmReset'))) return;
     resetDemoData();
     window.location.reload();
   };
 
   return (
     <div className="demo-banner" role="note">
-      <span>
-        <strong>Static demo (GitHub Pages).</strong> The API runs inside your browser with the same seed
-        data and rules; changes are saved in this browser only. The full stack (Node.js + PostgreSQL) runs with Docker.
-      </span>
-      <button type="button" className="btn btn-sm" onClick={reset}>Reset data</button>
+      <span><strong>{t('demo.title')}</strong> {t('demo.text')}</span>
+      <button type="button" className="btn btn-sm btn-ghost" onClick={reset}>
+        <Icon name="refresh" size={14} /> {t('actions.reset')}
+      </button>
     </div>
   );
 }

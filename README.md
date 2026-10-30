@@ -3,12 +3,12 @@
 Online course management system built for the **XPTO practical test (Node.js + React.js)**.
 
 - **API**: Node.js, Express 5, Knex (migrations and seeds), PostgreSQL, Zod validation
-- **Web**: React 18, React Router, Vite, plain CSS
+- **Web**: React 18, React Router, Vite, plain CSS with design tokens. English / Português (BR) and light / dark theme, chosen in the sidebar
 - **Docs**: OpenAPI 3 / Swagger UI at `/api/docs`, Postman collection with tests
 - **Infra**: Docker (multi-stage), Docker Compose, Heroku (container stack), GitHub Actions CI
 - **Live demo**: https://leohamil31.github.io/XPTO-TI/ (static, see [GitHub Pages](#github-pages-static-demo))
 
-![Reports](docs/screenshots/reports.png)
+![Dashboard](docs/screenshots/dashboard-en.png)
 
 ## Contents
 
@@ -95,7 +95,7 @@ Each module must have at least one content, so "a course with 5 modules and 3 co
 ## SQL reports
 
 All queries are in **[backend/sql/reports.sql](backend/sql/reports.sql)**, exposed by the API under
-`/api/reports/*` and shown in the **Reports** screen.
+`/api/reports/*` and shown in the **Dashboard** screen (each report has a "Show SQL" button).
 
 **SQL 01 - users with the most courses**
 
@@ -200,6 +200,16 @@ Errors return `{ "error": { "status", "message", "details" } }`:
 collection (or `npx newman run docs/postman/course-manager.postman_collection.json`) creates a user,
 course, module and content, exercises every route and cleans up after itself.
 
+## Internationalization and theme
+
+The interface is available in **English** and **Português (BR)**. Switch with the `EN | PT` control at the
+bottom of the sidebar. The first visit follows the browser language, and the choice is saved in `localStorage`.
+Translations live in `frontend/src/i18n/` and use a small dependency-free provider: `t('key', { params })`,
+date formatting with `Intl`, and translation of the API's validation and constraint messages.
+The API itself stays in English, as the test requires.
+
+The sun/moon button switches between light and dark themes. Its first value follows the operating system.
+
 ## Tests
 
 Integration tests (Node test runner + Supertest) run against a real PostgreSQL database
@@ -260,6 +270,7 @@ frontend/
   src/
     api/client.js             # fetch wrapper
     resources.jsx             # columns/fields/filters of each CRUD screen
+    i18n/                     # en.js, pt-BR.js and the I18nProvider (t(), dates, API error messages)
     pages/                    # Reports, ResourcePage, CourseDetail, ContentDetail
     components/, hooks/
 docs/
@@ -269,6 +280,6 @@ Dockerfile, docker-compose.yml, heroku.yml
 
 ## Screenshots
 
-| Course | Content viewers | Validation |
+| Course (PT-BR, dark) | Content viewers (PT-BR) | Validation (PT-BR) |
 | --- | --- | --- |
-| ![Course](docs/screenshots/course-detail.png) | ![Content](docs/screenshots/content-detail.png) | ![Validation](docs/screenshots/user-validation.png) |
+| ![Course](docs/screenshots/course-dark-pt.png) | ![Content](docs/screenshots/content-viewers-pt.png) | ![Validation](docs/screenshots/validation-pt.png) |

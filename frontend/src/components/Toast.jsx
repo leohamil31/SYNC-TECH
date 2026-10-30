@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useState } from 'react';
+import Icon from './Icon';
 
 const ToastContext = createContext(() => {});
 
@@ -16,7 +17,13 @@ export function ToastProvider({ children }) {
       {children}
       <div className="toasts" role="status" aria-live="polite">
         {toasts.map((t) => (
-          <div key={t.id} className={`toast toast-${t.type}`}>{t.message}</div>
+          <div key={t.id} className={`toast toast-${t.type}`}>
+            <span className="toast-dot" />
+            {t.message}
+            <button type="button" className="toast-close" aria-label="×" onClick={() => setToasts((l) => l.filter((x) => x.id !== t.id))}>
+              <Icon name="x" size={14} />
+            </button>
+          </div>
         ))}
       </div>
     </ToastContext.Provider>

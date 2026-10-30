@@ -1,0 +1,71 @@
+export default {
+  app: { name: 'Course Manager', tagline: 'Online learning admin' },
+  nav: { dashboard: 'Dashboard', courses: 'Courses', modules: 'Modules', contents: 'Contents', users: 'Users', apiDocs: 'API docs', main: 'Main', manage: 'Manage' },
+  settings: { language: 'Language', theme: 'Theme', light: 'Light', dark: 'Dark' },
+  entities: {
+    user: 'user', course: 'course', module: 'module', content: 'content',
+    users: 'Users', courses: 'Courses', modules: 'Modules', contents: 'Contents',
+  },
+  descriptions: {
+    users: 'People who create courses and watch lessons.',
+    courses: 'Course catalog with its modules and lessons.',
+    modules: 'Sections that group the lessons of a course.',
+    contents: 'Lessons and their watch history.',
+  },
+  fields: {
+    id: 'ID', name: 'Name', email: 'Email', status: 'Status', code: 'Code', uniqueCode: 'Unique code',
+    title: 'Title', description: 'Description', createdBy: 'Created by', author: 'Author',
+    course: 'Course', module: 'Module', content: 'Content', courses: 'Courses', modules: 'Modules',
+    contents: 'Contents', views: 'Views', updated: 'Updated', user: 'User', userId: 'User ID',
+    watchedAt: 'Watched at', contentId: 'Content ID',
+  },
+  status: { active: 'Active', inactive: 'Inactive' },
+  actions: {
+    new: 'New {entity}', edit: 'Edit', delete: 'Delete', save: 'Save', saving: 'Saving…', cancel: 'Cancel',
+    close: 'Close', previous: 'Previous', next: 'Next', remove: 'Remove', addContent: 'Content',
+    editCourse: 'Edit course', markWatched: 'Mark as watched', reset: 'Reset data', manageViewers: 'Manage viewers',
+  },
+  common: {
+    search: 'Search {entity}…', all: 'All', anyStatus: 'Any status', allAuthors: 'All authors', allCourses: 'All courses', select: 'Select…', loading: 'Loading…',
+    noRecords: 'No records found.', records: '{count} record(s)', page: 'Page {page} of {total}',
+    notFound: 'Page not found.', views: '{count} view(s)', backTo: 'Back to {page}',
+  },
+  messages: {
+    saved: '{entity} saved', deleted: '{entity} deleted', confirmDelete: 'Delete {entity} "{name}"?',
+    confirmDeleteCourse: 'Delete course "{name}" with all its modules and contents?',
+    markedWatched: 'Marked as watched', unmarked: 'Watch mark removed', confirmReset: 'Restore the original seed data?',
+  },
+  course: {
+    createdBy: 'created by {name}', updatedAt: 'updated {date}', noModules: 'This course has no modules yet.',
+    noContents: 'No contents yet.', modulesTitle: 'Modules',
+  },
+  contentPage: {
+    watchedBy: 'Watched by', selectUser: 'Select a user…', nobody: 'Nobody has watched this content yet.',
+  },
+  reports: {
+    title: 'Dashboard', subtitle: 'Overview of the catalog and the SQL reports requested in the test.',
+    kpiUsers: 'Users', kpiCourses: 'Courses', kpiModules: 'Modules', kpiContents: 'Contents',
+    r1Title: 'Users with the most courses', r1Desc: 'All users ranked by the number of courses they created.',
+    r2Title: 'Course with the most contents', r2Desc: 'Ties are listed together.',
+    r3Title: 'Courses with total of modules and contents', r3Desc: 'Single query using LEFT JOINs and COUNT(DISTINCT).',
+    r4Title: 'Contents with course name', r4Desc: 'Every content joined with its module and course.',
+    r5Title: 'Users who watched a content', r5Desc: 'Uses the content_views table (user × content).',
+    showSql: 'Show SQL', hideSql: 'Hide SQL',
+  },
+  demo: {
+    title: 'Static demo (GitHub Pages).',
+    text: 'The API runs inside your browser with the same seed data and rules; changes are saved in this browser only. The full stack (Node.js + PostgreSQL) runs with Docker.',
+  },
+  errors: {
+    validation: 'Please check the highlighted fields.',
+    min: 'Must have at least {n} characters',
+    max: 'Must have at most {n} characters',
+    email: 'Invalid email address',
+    required: 'Required field',
+    unique: 'A record with the same unique value already exists',
+    referenced: 'This record is referenced by other records and cannot be removed',
+    missingRef: 'A referenced record does not exist',
+    notFound: 'Record not found',
+    network: 'Could not reach the server',
+  },
+};

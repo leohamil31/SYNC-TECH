@@ -1,10 +1,24 @@
+import { useI18n } from '../i18n';
+import Icon from './Icon';
+
 export default function Pagination({ meta, onChange }) {
-  if (!meta || meta.total_pages <= 1) return meta ? <p className="muted small">{meta.total} record(s)</p> : null;
+  const { t } = useI18n();
+  if (!meta) return null;
+
   return (
     <nav className="pagination" aria-label="Pagination">
-      <button type="button" className="btn" disabled={meta.page <= 1} onClick={() => onChange(meta.page - 1)}>Previous</button>
-      <span className="muted small">Page {meta.page} of {meta.total_pages} · {meta.total} record(s)</span>
-      <button type="button" className="btn" disabled={meta.page >= meta.total_pages} onClick={() => onChange(meta.page + 1)}>Next</button>
+      <span className="muted small">{t('common.records', { count: meta.total })}</span>
+      {meta.total_pages > 1 && (
+        <div className="pagination-controls">
+          <button type="button" className="btn btn-ghost btn-sm" disabled={meta.page <= 1} onClick={() => onChange(meta.page - 1)}>
+            <Icon name="chevronLeft" size={16} /> {t('actions.previous')}
+          </button>
+          <span className="small">{t('common.page', { page: meta.page, total: meta.total_pages })}</span>
+          <button type="button" className="btn btn-ghost btn-sm" disabled={meta.page >= meta.total_pages} onClick={() => onChange(meta.page + 1)}>
+            {t('actions.next')} <Icon name="chevronRight" size={16} />
+          </button>
+        </div>
+      )}
     </nav>
   );
 }
