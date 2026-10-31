@@ -3,7 +3,7 @@
 Online course management system built for the **XPTO practical test (Node.js + React.js)**.
 
 - **API**: Node.js, Express 5, Knex (migrations and seeds), PostgreSQL, Zod validation
-- **Web**: React 18, React Router, Vite, plain CSS with design tokens. English / Português (BR) and light / dark theme, chosen in the sidebar
+- **Web**: React 18, React Router, Vite, Framer Motion. SyncTech visual identity (glass surfaces, 3D animated logo, page and list transitions), English / Português (BR) and light / dark theme chosen in the sidebar. Animations respect the OS "reduce motion" setting
 - **Docs**: OpenAPI 3 / Swagger UI at `/api/docs`, Postman collection with tests
 - **Infra**: Docker (multi-stage), Docker Compose, Heroku (container stack), GitHub Actions CI
 - **Live demo**: https://leohamil31.github.io/XPTO-TI/ (static, see [GitHub Pages](#github-pages-static-demo))

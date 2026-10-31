@@ -1,9 +1,24 @@
+import { useEffect, useRef } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useI18n } from '../i18n';
+import { row as rowVariants } from './motion/variants';
 import Icon from './Icon';
 
+/**
+ * Rows stagger in on load, slide out on delete, and newly-appearing/updated rows
+ * get a brief highlight (`is-flash`). API is unchanged from the original.
+ */
 export default function DataTable({ columns, rows, actions, empty, loading }) {
   const { t } = useI18n();
   const colSpan = columns.length + (actions ? 1 : 0);
+
+  // Track row signatures so created/updated rows can flash once.
+  const seen = useRef(null);
+  const sig = (r) => JSON.stringify(r);
+  const isFresh = (r) => seen.current && seen.current.get(r.id) !== sig(r);
+  useEffect(() => {
+    if (rows.length) seen.current = new Map(rows.map((r) => [r.id, sig(r)]));
+  }, [rows]);
 
   return (
     <div className="table-wrap">
@@ -29,16 +44,27 @@ export default function DataTable({ columns, rows, actions, empty, loading }) {
               </td>
             </tr>
           )}
-          {rows.map((row) => (
-            <tr key={row.id}>
-              {columns.map((c) => (
-                <td key={c.key} className={c.numeric ? 'num' : undefined}>
-                  {c.render ? c.render(row) : row[c.key]}
-                </td>
-              ))}
-              {actions && <td className="actions-col">{actions(row)}</td>}
-            </tr>
-          ))}
+          <AnimatePresence initial={true} mode="popLayout">
+            {rows.map((row, i) => (
+              <motion.tr
+                key={row.id}
+                layout="position"
+                custom={i}
+                variants={rowVariants}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                className={isFresh(row) ? 'is-flash' : undefined}
+              >
+                {columns.map((c) => (
+                  <td key={c.key} className={c.numeric ? 'num' : undefined}>
+                    {c.render ? c.render(row) : row[c.key]}
+                  </td>
+                ))}
+                {actions && <td className="actions-col">{actions(row)}</td>}
+              </motion.tr>
+            ))}
+          </AnimatePresence>
         </tbody>
       </table>
     </div>

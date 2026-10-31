@@ -23,7 +23,7 @@ export default {
   actions: {
     new: 'Novo {entity}', edit: 'Editar', delete: 'Excluir', save: 'Salvar', saving: 'Salvando…', cancel: 'Cancelar',
     close: 'Fechar', previous: 'Anterior', next: 'Próxima', remove: 'Remover', addContent: 'Conteúdo',
-    editCourse: 'Editar curso', markWatched: 'Marcar como assistido', reset: 'Restaurar dados', manageViewers: 'Gerenciar quem assistiu',
+    editCourse: 'Editar curso', skip: 'Pular', markWatched: 'Marcar como assistido', reset: 'Restaurar dados', manageViewers: 'Gerenciar quem assistiu',
   },
   common: {
     search: 'Buscar {entity}…', all: 'Todos', anyStatus: 'Qualquer status', allAuthors: 'Todos os autores', allCourses: 'Todos os cursos', select: 'Selecione…', loading: 'Carregando…',

@@ -1,12 +1,18 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
 import { DEMO, http } from '../api/client';
 import { useAsync } from '../hooks/useAsync';
 import { useI18n } from '../i18n';
 import DataTable from '../components/DataTable';
-import PageHeader from '../components/PageHeader';
 import Avatar from '../components/Avatar';
 import Icon from '../components/Icon';
+import TiltCard from '../components/motion/TiltCard';
+import CountUp from '../components/motion/CountUp';
+import Hero from '../components/motion/Hero';
+import { ease, rise, stagger } from '../components/motion/variants';
+
+const MotionLink = motion.create(Link);
 
 // Same queries as backend/sql/reports.sql, shown on demand next to each report.
 const SQL = {
@@ -49,7 +55,15 @@ ORDER BY cv.watched_at, u.name;`,
 
 const Bar = ({ value, max }) => (
   <span className="bar-cell">
-    <span className="bar-track"><span className="bar" style={{ width: `${max ? (value / max) * 100 : 0}%` }} /></span>
+    <span className="bar-track">
+      <motion.span
+        className="bar"
+        initial={{ scaleX: 0 }}
+        animate={{ scaleX: 1 }}
+        transition={{ duration: 0.9, ease, delay: 0.15 }}
+        style={{ width: `${max ? (value / max) * 100 : 0}%` }}
+      />
+    </span>
     <span className="bar-value">{value}</span>
   </span>
 );
@@ -62,7 +76,7 @@ function Report({ number, title, description, path, columns, children, className
   const { data, error, loading } = useAsync(() => http.get(path), [path]);
 
   return (
-    <article className={`panel report ${className}`}>
+    <motion.article className={`panel report ${className}`} variants={rise}>
       <header className="report-header">
         <div>
           <span className="tag">SQL {number}</span>
@@ -80,25 +94,28 @@ function Report({ number, title, description, path, columns, children, className
           )}
         </div>
       </header>
-      {showSql && <pre className="sql"><code>{SQL[number]}</code></pre>}
+      <AnimatePresence initial={false}>
+        {showSql && (
+          <motion.pre
+            className="sql"
+            initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+            animate={{ opacity: 1, height: 'auto', marginBottom: 16 }}
+            exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+            transition={{ duration: 0.3, ease }}
+          >
+            <code>{SQL[number]}</code>
+          </motion.pre>
+        )}
+      </AnimatePresence>
       {children}
       {error && <div className="alert">{apiMessage(error.message)}</div>}
       <DataTable columns={columns(data || [])} rows={data || []} loading={loading && !data} />
-    </article>
+    </motion.article>
   );
 }
 
-function Kpis() {
+function Kpis({ data }) {
   const { t } = useI18n();
-  const { data } = useAsync(async () => {
-    const [users, courses] = await Promise.all([http.get('/reports/users-most-courses'), http.get('/reports/courses-summary')]);
-    return {
-      users: users.length,
-      courses: courses.length,
-      modules: courses.reduce((sum, c) => sum + c.total_modules, 0),
-      contents: courses.reduce((sum, c) => sum + c.total_contents, 0),
-    };
-  }, []);
 
   const items = [
     ['users', 'users', t('reports.kpiUsers'), '/users'],
@@ -108,30 +125,41 @@ function Kpis() {
   ];
 
   return (
-    <div className="kpis">
+    <motion.div className="kpis" variants={stagger(0.06)}>
       {items.map(([key, icon, label, to]) => (
-        <Link key={key} to={to} className={`kpi kpi-${key}`}>
-          <span className="kpi-icon"><Icon name={icon} /></span>
-          <div>
-            <strong>{data ? data[key] : '–'}</strong>
-            <span>{label}</span>
-          </div>
-        </Link>
+        <motion.div key={key} variants={rise}>
+          <TiltCard as={Link} to={to} className={`kpi kpi-${key}`}>
+            <span className="kpi-icon"><Icon name={icon} /></span>
+            <div>
+              <strong><CountUp value={data?.[key]} /></strong>
+              <span>{label}</span>
+            </div>
+          </TiltCard>
+        </motion.div>
       ))}
-    </div>
+    </motion.div>
   );
 }
 
 export default function Reports() {
   const { t, formatDate } = useI18n();
   const [contentId, setContentId] = useState(2);
+  const { data: totals } = useAsync(async () => {
+    const [users, courses] = await Promise.all([http.get('/reports/users-most-courses'), http.get('/reports/courses-summary')]);
+    return {
+      users: users.length,
+      courses: courses.length,
+      modules: courses.reduce((sum, c) => sum + c.total_modules, 0),
+      contents: courses.reduce((sum, c) => sum + c.total_contents, 0),
+    };
+  }, []);
 
   return (
-    <section>
-      <PageHeader title={t('reports.title')} subtitle={t('reports.subtitle')} />
-      <Kpis />
+    <>
+      <Hero title={t('reports.title')} subtitle={t('reports.subtitle')} />
+      <Kpis data={totals} />
 
-      <div className="report-grid">
+      <motion.div className="report-grid" variants={stagger(0.06)}>
         <Report
           number="01"
           title={t('reports.r1Title')}
@@ -154,7 +182,7 @@ export default function Reports() {
             { key: 'total_contents', label: t('fields.contents'), numeric: true },
           ]}
         />
-      </div>
+      </motion.div>
 
       <Report
         number="03"
@@ -187,9 +215,9 @@ export default function Reports() {
             {t('fields.contentId')}
             <input type="number" min="1" value={contentId} onChange={(e) => setContentId(e.target.value)} />
           </label>
-          <Link to={`/contents/${contentId}`} className="btn btn-sm btn-ghost">
+          <MotionLink to={`/contents/${contentId}`} className="btn btn-sm btn-ghost" whileHover={{ x: 3 }}>
             {t('actions.manageViewers')} <Icon name="chevronRight" size={14} />
-          </Link>
+          </MotionLink>
         </div>
       </Report>
 
@@ -206,6 +234,6 @@ export default function Reports() {
           { key: 'course_title', label: t('fields.course'), render: (r) => <Link to={`/courses/${r.course_id}`}>{r.course_title}</Link> },
         ]}
       />
-    </section>
+    </>
   );
 }

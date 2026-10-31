@@ -23,7 +23,7 @@ export default {
   actions: {
     new: 'New {entity}', edit: 'Edit', delete: 'Delete', save: 'Save', saving: 'Saving…', cancel: 'Cancel',
     close: 'Close', previous: 'Previous', next: 'Next', remove: 'Remove', addContent: 'Content',
-    editCourse: 'Edit course', markWatched: 'Mark as watched', reset: 'Reset data', manageViewers: 'Manage viewers',
+    editCourse: 'Edit course', skip: 'Skip', markWatched: 'Mark as watched', reset: 'Reset data', manageViewers: 'Manage viewers',
   },
   common: {
     search: 'Search {entity}…', all: 'All', anyStatus: 'Any status', allAuthors: 'All authors', allCourses: 'All courses', select: 'Select…', loading: 'Loading…',

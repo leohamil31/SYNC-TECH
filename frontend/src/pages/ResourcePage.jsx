@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
 import { api } from '../api/client';
 import { useAsync } from '../hooks/useAsync';
 import { useCrud } from '../hooks/useCrud';
@@ -12,6 +13,7 @@ import RowActions from '../components/RowActions';
 import FilterSelect from '../components/FilterSelect';
 import PageHeader from '../components/PageHeader';
 import Icon from '../components/Icon';
+import { rise } from '../components/motion/variants';
 
 /** Generic list + CRUD screen. Page, search and filters live in the URL. */
 export default function ResourcePage({ name }) {
@@ -33,7 +35,6 @@ export default function ResourcePage({ name }) {
     setParams(next);
   };
 
-  // Debounced search to avoid one request per keystroke.
   useEffect(() => {
     const timer = setTimeout(() => {
       if ((params.get('search') || '') !== search) setParam('search', search);
@@ -43,18 +44,24 @@ export default function ResourcePage({ name }) {
   }, [search]);
 
   return (
-    <section>
+    <>
       <PageHeader
         title={config.title}
         subtitle={config.description}
         actions={
-          <button type="button" className="btn btn-primary" onClick={() => crud.open()}>
+          <motion.button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => crud.open()}
+            whileHover={{ y: -2 }}
+            whileTap={{ scale: 0.96 }}
+          >
             <Icon name="plus" size={16} /> {t('actions.new', { entity: config.singular })}
-          </button>
+          </motion.button>
         }
       />
 
-      <div className="panel">
+      <motion.div className="panel" variants={rise}>
         <div className="toolbar">
           <label className="search-field">
             <Icon name="search" size={16} />
@@ -71,7 +78,13 @@ export default function ResourcePage({ name }) {
           ))}
         </div>
 
-        {error && <div className="alert">{apiMessage(error.message)}</div>}
+        <AnimatePresence>
+          {error && (
+            <motion.div className="alert" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
+              {apiMessage(error.message)}
+            </motion.div>
+          )}
+        </AnimatePresence>
         <div className={loading && data ? 'is-refreshing' : undefined}>
           <DataTable
             columns={config.columns}
@@ -81,9 +94,9 @@ export default function ResourcePage({ name }) {
           />
         </div>
         <Pagination meta={data?.meta} onChange={(page) => setParam('page', page)} />
-      </div>
+      </motion.div>
 
       <CrudModal crud={crud} config={config} />
-    </section>
+    </>
   );
 }
