@@ -24,6 +24,7 @@ export default {
     hidePassword: 'Hide password',
     passwordRule: 'At least 8 characters, with letters and numbers.',
     demoHint: 'Development build. Fill in a sample account:',
+    demoHintPages: 'Demo: sign in with a sample account.',
   },
 
   home: {
@@ -184,6 +185,13 @@ export default {
     confirmDelete: '"{name}" will be deleted permanently, along with dependent items such as modules and lessons.',
     published: 'Course published', unpublished: 'Course unpublished',
     markedCompleted: 'Lesson marked as completed', unmarked: 'Completion removed',
+  },
+  demo: {
+    title: 'Demo.',
+    text: 'The API runs in your browser and changes are saved only here. The full version uses Node.js and PostgreSQL.',
+    reset: 'Reset data',
+    resetTitle: 'Reset the sample data?',
+    resetText: 'Courses, users and progress go back to the initial state in this browser.',
   },
   contentPage: {
     completedBy: 'Completed by',

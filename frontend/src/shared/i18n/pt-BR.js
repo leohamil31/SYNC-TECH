@@ -24,6 +24,7 @@ export default {
     hidePassword: 'Ocultar senha',
     passwordRule: 'Mínimo de 8 caracteres, com letras e números.',
     demoHint: 'Ambiente de desenvolvimento. Preencher com a conta de exemplo:',
+    demoHintPages: 'Demonstração: entre com uma conta de exemplo.',
   },
 
   home: {
@@ -184,6 +185,13 @@ export default {
     confirmDelete: '"{name}" será excluído permanentemente. Itens dependentes, como módulos e aulas, também serão.',
     published: 'Curso publicado', unpublished: 'Curso despublicado',
     markedCompleted: 'Aula marcada como concluída', unmarked: 'Conclusão removida',
+  },
+  demo: {
+    title: 'Demonstração.',
+    text: 'A API roda no seu navegador e as alterações ficam salvas só nele. A versão completa usa Node.js e PostgreSQL.',
+    reset: 'Restaurar dados',
+    resetTitle: 'Restaurar os dados de exemplo?',
+    resetText: 'Cursos, usuários e progresso voltam ao estado inicial neste navegador.',
   },
   contentPage: {
     completedBy: 'Concluída por',

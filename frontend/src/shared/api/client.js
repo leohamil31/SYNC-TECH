@@ -1,5 +1,12 @@
 const BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
+/**
+ * GitHub Pages build (VITE_DEMO=true): there is no backend, so the API runs in the browser.
+ * The dynamic import keeps the demo server out of the normal production bundle.
+ */
+export const DEMO = import.meta.env.VITE_DEMO === 'true';
+const demoServer = DEMO ? import('./demo/server') : null;
+
 export class ApiError extends Error {
   constructor(status, message, details) {
     super(message);
@@ -19,6 +26,16 @@ export const setUnauthorizedHandler = (handler) => {
  * (`credentials: 'include'`), so no token is ever stored in JavaScript.
  */
 async function request(method, path, body, { signal, keepalive, silent401 = false } = {}) {
+  if (demoServer) {
+    const { demoRequest } = await demoServer;
+    try {
+      return await demoRequest(method, path, body, ApiError);
+    } catch (error) {
+      if (error.status === 401 && !silent401) onUnauthorized();
+      throw error;
+    }
+  }
+
   let response;
   try {
     response = await fetch(`${BASE_URL}${path}`, {

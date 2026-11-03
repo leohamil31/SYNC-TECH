@@ -180,8 +180,17 @@ git push heroku main
 heroku run ./node_modules/.bin/knex seed:run   # opcional: dados de exemplo
 ```
 
+## GitHub Pages (demo estática)
+
+Demo: https://leohamil31.github.io/SYNC-TECH/
+
+O GitHub Pages só serve arquivos estáticos, então não roda Node.js nem PostgreSQL. O workflow `.github/workflows/pages.yml` gera o frontend com `VITE_DEMO=true`. Nesse modo, as chamadas à API são atendidas por `frontend/src/shared/api/demo/server.js`, uma reimplementação da API no navegador (login, papéis, catálogo, progresso, CRUD e relatórios) com os mesmos dados do seed, salva no `localStorage`. Use as contas de exemplo pelos atalhos da tela de login; o botão "Restaurar dados" volta ao estado inicial.
+
+É uma demonstração: tudo roda no navegador de quem acessa, sem segurança real. O build normal não inclui esse código (ele é carregado com `import()` dinâmico só quando `VITE_DEMO=true`).
+
+Configuração única: **Settings → Pages → Build and deployment → Source: GitHub Actions**. Cada push na `main` publica de novo.
+
 ## Mudanças em relação à versão anterior
 
-- A demo estática do GitHub Pages (`api/mock.js` + `pages.yml`) foi removida. Ela simulava a API no navegador e não pode reproduzir autenticação real com segurança. A aplicação agora exige o backend.
 - A coleção Postman foi removida porque não cobria autenticação. Use o Swagger (`/api/docs`) com o botão Authorize.
 - O tema claro foi removido; a identidade é escura por definição.

@@ -8,6 +8,8 @@ import { spring } from '../design-system/motion/variants';
 import { useAuth } from '../features/auth/AuthProvider';
 import { useI18n } from '../shared/i18n';
 import LanguageSwitch from './LanguageSwitch';
+import DemoBanner from './DemoBanner';
+import { DEMO } from '../shared/api/client';
 import { NAVIGATION } from './navigation';
 import './shell.css';
 
@@ -115,6 +117,7 @@ export default function AppShell({ area }) {
 
       <main id="main" className="main">
         <div className="main-inner">
+          {DEMO && <DemoBanner />}
           <AnimatePresence mode="wait" initial={false}>
             <PageTransition key={location.pathname}>{outlet}</PageTransition>
           </AnimatePresence>
