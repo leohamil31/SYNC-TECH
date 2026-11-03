@@ -1,277 +1,831 @@
 openapi: 3.0.3
 info:
-  title: Course Manager API
-  version: 1.0.0
-  description: |
-    REST API for managing online courses, modules, contents (lessons) and users,
-    plus reports and lesson watch tracking.
-
-    Conventions:
-    - JSON in/out, `snake_case` fields.
-    - Lists are paginated with `page` and `limit` and return `{ data, meta }`.
-    - `PUT` replaces all editable fields, `PATCH` updates only the fields sent.
-    - Errors return `{ error: { status, message, details? } }`.
+  title: SyncTech API
+  version: 2.0.0
+  description: "REST API of the SyncTech learning platform: authentication, learner area\n(catalog, lesson player\
+    \ data, progress tracking) and admin area (users, courses,\nmodules, video lessons, reports).\n\nConventions:\n\
+    - JSON in/out, `snake_case` fields.\n- Authentication: `POST /auth/login` returns a token and sets an httpOnly\
+    \ cookie.\n  Send `Authorization: Bearer <token>` (use the **Authorize** button) or the cookie.\n- Roles: `student`\
+    \ (learner area only) and `admin` (everything).\n- Lists are paginated with `page` and `limit` and return `{\
+    \ data, meta }`.\n- `PUT` replaces all editable fields, `PATCH` updates only the fields sent.\n- Errors return\
+    \ `{ error: { status, message, details? } }`.\n"
 servers:
-  - url: /api
-    description: Current host
+- url: /api
+  description: Current host
 tags:
-  - name: Users
-  - name: Courses
-  - name: Modules
-  - name: Contents
-  - name: Content views
-    description: Tracks which users watched each content (lesson)
-  - name: Reports
-  - name: Health
-
+- name: Auth
+- name: Learner
+  description: Catalog, lessons and progress of the signed-in user
+- name: Users
+  description: Admin only
+- name: Courses
+  description: Admin only
+- name: Modules
+  description: Admin only
+- name: Contents
+  description: Video lessons. Admin only
+- name: Content views
+  description: Which users completed each lesson. Admin only
+- name: Reports
+  description: Admin only
+- name: Health
 paths:
   /health:
     get:
-      tags: [Health]
+      tags:
+      - Health
       summary: Health check
       responses:
         '200':
           description: API is up
           content:
             application/json:
-              schema: { type: object, properties: { status: { type: string, example: ok } } }
-
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+      security: []
+  /auth/login:
+    post:
+      tags:
+      - Auth
+      summary: Sign in
+      security: []
+      description: Returns the session and sets the `synctech_session` httpOnly cookie. Limited to 10 attempts per
+        15 minutes per IP.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - email
+              - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: alice@example.com
+                password:
+                  type: string
+                  format: password
+                  example: SyncTech@2026
+      responses:
+        '200':
+          description: Signed in
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /auth/register:
+    post:
+      tags:
+      - Auth
+      summary: Create a student account
+      security: []
+      description: Self sign-up (disable with ALLOW_SIGNUP=false). Always creates an active student.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - name
+              - email
+              - password
+              properties:
+                name:
+                  type: string
+                  minLength: 2
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+                  minLength: 8
+      responses:
+        '201':
+          description: Account created and signed in
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /auth/logout:
+    post:
+      tags:
+      - Auth
+      summary: Sign out (clears the cookie)
+      security: []
+      responses:
+        '204':
+          description: Signed out
+  /auth/me:
+    get:
+      tags:
+      - Auth
+      summary: Current user
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionUser'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /me/summary:
+    get:
+      tags:
+      - Learner
+      summary: Learning stats and the lesson to resume
+      responses:
+        '200':
+          description: Summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Summary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /me/courses:
+    get:
+      tags:
+      - Learner
+      summary: Catalog with my progress
+      description: Published courses (admins also see unpublished ones).
+      parameters:
+      - $ref: '#/components/parameters/search'
+      responses:
+        '200':
+          description: Courses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CatalogCourse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /me/courses/{id}:
+    get:
+      tags:
+      - Learner
+      summary: Course outline with my progress
+      parameters:
+      - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: Course
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CourseOutline'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /me/lessons/{id}:
+    get:
+      tags:
+      - Learner
+      summary: Lesson player data
+      parameters:
+      - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: Lesson
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Lesson'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /me/lessons/{id}/progress:
+    put:
+      tags:
+      - Learner
+      summary: Save my progress on a lesson
+      parameters:
+      - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProgressInput'
+      responses:
+        '200':
+          description: Saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Progress'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags:
+      - Learner
+      summary: Reset my progress on a lesson
+      parameters:
+      - $ref: '#/components/parameters/id'
+      responses:
+        '204':
+          description: Reset
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /users:
     get:
-      tags: [Users]
+      tags:
+      - Users
       summary: List users
       parameters:
-        - $ref: '#/components/parameters/page'
-        - $ref: '#/components/parameters/limit'
-        - $ref: '#/components/parameters/search'
-        - { name: status, in: query, schema: { $ref: '#/components/schemas/UserStatus' } }
+      - $ref: '#/components/parameters/page'
+      - $ref: '#/components/parameters/limit'
+      - $ref: '#/components/parameters/search'
+      - name: status
+        in: query
+        schema:
+          $ref: '#/components/schemas/UserStatus'
+      - name: role
+        in: query
+        schema:
+          $ref: '#/components/schemas/UserRole'
       responses:
         '200':
           description: Paginated users
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/UserList' }
-        '400': { $ref: '#/components/responses/ValidationError' }
+              schema:
+                $ref: '#/components/schemas/UserList'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
     post:
-      tags: [Users]
+      tags:
+      - Users
       summary: Create a user
-      requestBody: { $ref: '#/components/requestBodies/User' }
+      requestBody:
+        $ref: '#/components/requestBodies/User'
       responses:
-        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/User' } } } }
-        '400': { $ref: '#/components/responses/ValidationError' }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /users/{id}:
-    parameters: [{ $ref: '#/components/parameters/id' }]
+    parameters:
+    - $ref: '#/components/parameters/id'
     get:
-      tags: [Users]
+      tags:
+      - Users
       summary: Get a user
       responses:
-        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/User' } } } }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
     put:
-      tags: [Users]
+      tags:
+      - Users
       summary: Replace a user
-      requestBody: { $ref: '#/components/requestBodies/User' }
+      requestBody:
+        $ref: '#/components/requestBodies/User'
       responses:
-        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/User' } } } }
-        '400': { $ref: '#/components/responses/ValidationError' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      description: An admin cannot delete, deactivate or demote their own account (409).
     patch:
-      tags: [Users]
+      tags:
+      - Users
       summary: Partially update a user
       requestBody:
         required: true
-        content: { application/json: { schema: { $ref: '#/components/schemas/UserInput' } } }
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserInput'
       responses:
-        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/User' } } } }
-        '400': { $ref: '#/components/responses/ValidationError' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      description: An admin cannot delete, deactivate or demote their own account (409).
     delete:
-      tags: [Users]
+      tags:
+      - Users
       summary: Delete a user
-      description: Fails with 409 while the user still owns courses or modules.
-      responses:
-        '204': { description: Deleted }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Conflict' }
+      description: 'Fails with 409 while the user still owns courses or modules.
 
+        An admin cannot delete, deactivate or demote their own account (409).'
+      responses:
+        '204':
+          description: Deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /courses:
     get:
-      tags: [Courses]
+      tags:
+      - Courses
       summary: List courses
       parameters:
-        - $ref: '#/components/parameters/page'
-        - $ref: '#/components/parameters/limit'
-        - $ref: '#/components/parameters/search'
-        - { name: user_id, in: query, schema: { type: integer }, description: Filter by author }
+      - $ref: '#/components/parameters/page'
+      - $ref: '#/components/parameters/limit'
+      - $ref: '#/components/parameters/search'
+      - name: user_id
+        in: query
+        schema:
+          type: integer
+        description: Filter by author
+      - name: published
+        in: query
+        schema:
+          type: string
+          enum:
+          - 'true'
+          - 'false'
       responses:
-        '200': { description: Paginated courses, content: { application/json: { schema: { $ref: '#/components/schemas/CourseList' } } } }
-        '400': { $ref: '#/components/responses/ValidationError' }
+        '200':
+          description: Paginated courses
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CourseList'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
     post:
-      tags: [Courses]
+      tags:
+      - Courses
       summary: Create a course
-      requestBody: { $ref: '#/components/requestBodies/Course' }
+      requestBody:
+        $ref: '#/components/requestBodies/Course'
       responses:
-        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Course' } } } }
-        '400': { $ref: '#/components/responses/ValidationError' }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Course'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /courses/{id}:
-    parameters: [{ $ref: '#/components/parameters/id' }]
+    parameters:
+    - $ref: '#/components/parameters/id'
     get:
-      tags: [Courses]
+      tags:
+      - Courses
       summary: Get a course
       responses:
-        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Course' } } } }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Course'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
     put:
-      tags: [Courses]
+      tags:
+      - Courses
       summary: Replace a course
-      requestBody: { $ref: '#/components/requestBodies/Course' }
+      requestBody:
+        $ref: '#/components/requestBodies/Course'
       responses:
-        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Course' } } } }
-        '400': { $ref: '#/components/responses/ValidationError' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Course'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
     patch:
-      tags: [Courses]
+      tags:
+      - Courses
       summary: Partially update a course
       requestBody:
         required: true
-        content: { application/json: { schema: { $ref: '#/components/schemas/CourseInput' } } }
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CourseInput'
       responses:
-        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Course' } } } }
-        '400': { $ref: '#/components/responses/ValidationError' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Course'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
     delete:
-      tags: [Courses]
+      tags:
+      - Courses
       summary: Delete a course (cascades to its modules and contents)
       responses:
-        '204': { description: Deleted }
-        '404': { $ref: '#/components/responses/NotFound' }
-
+        '204':
+          description: Deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /modules:
     get:
-      tags: [Modules]
+      tags:
+      - Modules
       summary: List modules
       parameters:
-        - $ref: '#/components/parameters/page'
-        - $ref: '#/components/parameters/limit'
-        - $ref: '#/components/parameters/search'
-        - { name: course_id, in: query, schema: { type: integer } }
-        - { name: user_id, in: query, schema: { type: integer } }
+      - $ref: '#/components/parameters/page'
+      - $ref: '#/components/parameters/limit'
+      - $ref: '#/components/parameters/search'
+      - name: course_id
+        in: query
+        schema:
+          type: integer
+      - name: user_id
+        in: query
+        schema:
+          type: integer
       responses:
-        '200': { description: Paginated modules, content: { application/json: { schema: { $ref: '#/components/schemas/ModuleList' } } } }
-        '400': { $ref: '#/components/responses/ValidationError' }
+        '200':
+          description: Paginated modules
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModuleList'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
     post:
-      tags: [Modules]
+      tags:
+      - Modules
       summary: Create a module
-      requestBody: { $ref: '#/components/requestBodies/Module' }
+      requestBody:
+        $ref: '#/components/requestBodies/Module'
       responses:
-        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Module' } } } }
-        '400': { $ref: '#/components/responses/ValidationError' }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Module'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /modules/{id}:
-    parameters: [{ $ref: '#/components/parameters/id' }]
+    parameters:
+    - $ref: '#/components/parameters/id'
     get:
-      tags: [Modules]
+      tags:
+      - Modules
       summary: Get a module
       responses:
-        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Module' } } } }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Module'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
     put:
-      tags: [Modules]
+      tags:
+      - Modules
       summary: Replace a module
-      requestBody: { $ref: '#/components/requestBodies/Module' }
+      requestBody:
+        $ref: '#/components/requestBodies/Module'
       responses:
-        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Module' } } } }
-        '400': { $ref: '#/components/responses/ValidationError' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Module'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
     patch:
-      tags: [Modules]
+      tags:
+      - Modules
       summary: Partially update a module
       requestBody:
         required: true
-        content: { application/json: { schema: { $ref: '#/components/schemas/ModuleInput' } } }
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModuleInput'
       responses:
-        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Module' } } } }
-        '400': { $ref: '#/components/responses/ValidationError' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Module'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
     delete:
-      tags: [Modules]
+      tags:
+      - Modules
       summary: Delete a module (cascades to its contents)
       responses:
-        '204': { description: Deleted }
-        '404': { $ref: '#/components/responses/NotFound' }
-
+        '204':
+          description: Deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /contents:
     get:
-      tags: [Contents]
+      tags:
+      - Contents
       summary: List contents
       parameters:
-        - $ref: '#/components/parameters/page'
-        - $ref: '#/components/parameters/limit'
-        - $ref: '#/components/parameters/search'
-        - { name: module_id, in: query, schema: { type: integer } }
-        - { name: course_id, in: query, schema: { type: integer } }
+      - $ref: '#/components/parameters/page'
+      - $ref: '#/components/parameters/limit'
+      - $ref: '#/components/parameters/search'
+      - name: module_id
+        in: query
+        schema:
+          type: integer
+      - name: course_id
+        in: query
+        schema:
+          type: integer
       responses:
-        '200': { description: Paginated contents, content: { application/json: { schema: { $ref: '#/components/schemas/ContentList' } } } }
-        '400': { $ref: '#/components/responses/ValidationError' }
+        '200':
+          description: Paginated contents
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContentList'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
     post:
-      tags: [Contents]
+      tags:
+      - Contents
       summary: Create a content
-      requestBody: { $ref: '#/components/requestBodies/Content' }
+      requestBody:
+        $ref: '#/components/requestBodies/Content'
       responses:
-        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Content' } } } }
-        '400': { $ref: '#/components/responses/ValidationError' }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Content'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /contents/{id}:
-    parameters: [{ $ref: '#/components/parameters/id' }]
+    parameters:
+    - $ref: '#/components/parameters/id'
     get:
-      tags: [Contents]
+      tags:
+      - Contents
       summary: Get a content
       responses:
-        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Content' } } } }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Content'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
     put:
-      tags: [Contents]
+      tags:
+      - Contents
       summary: Replace a content
-      requestBody: { $ref: '#/components/requestBodies/Content' }
+      requestBody:
+        $ref: '#/components/requestBodies/Content'
       responses:
-        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Content' } } } }
-        '400': { $ref: '#/components/responses/ValidationError' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Content'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
     patch:
-      tags: [Contents]
+      tags:
+      - Contents
       summary: Partially update a content
       requestBody:
         required: true
-        content: { application/json: { schema: { $ref: '#/components/schemas/ContentInput' } } }
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContentInput'
       responses:
-        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Content' } } } }
-        '400': { $ref: '#/components/responses/ValidationError' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Content'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
     delete:
-      tags: [Contents]
+      tags:
+      - Contents
       summary: Delete a content
       responses:
-        '204': { description: Deleted }
-        '404': { $ref: '#/components/responses/NotFound' }
-
+        '204':
+          description: Deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /contents/{id}/views:
-    parameters: [{ $ref: '#/components/parameters/id' }]
+    parameters:
+    - $ref: '#/components/parameters/id'
     get:
-      tags: [Content views]
+      tags:
+      - Content views
       summary: List users who watched the content
       responses:
         '200':
           description: Viewers
-          content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Viewer' } } } }
-        '404': { $ref: '#/components/responses/NotFound' }
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Viewer'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
     post:
-      tags: [Content views]
+      tags:
+      - Content views
       summary: Mark the content as watched by a user (idempotent)
       requestBody:
         required: true
@@ -279,8 +833,12 @@ paths:
           application/json:
             schema:
               type: object
-              required: [user_id]
-              properties: { user_id: { type: integer, example: 2 } }
+              required:
+              - user_id
+              properties:
+                user_id:
+                  type: integer
+                  example: 2
       responses:
         '201':
           description: Registered
@@ -289,27 +847,50 @@ paths:
               schema:
                 type: object
                 properties:
-                  id: { type: integer }
-                  user_id: { type: integer }
-                  content_id: { type: integer }
-                  watched_at: { type: string, format: date-time }
-        '400': { $ref: '#/components/responses/ValidationError' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Conflict' }
+                  id:
+                    type: integer
+                  user_id:
+                    type: integer
+                  content_id:
+                    type: integer
+                  watched_at:
+                    type: string
+                    format: date-time
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /contents/{id}/views/{userId}:
     parameters:
-      - $ref: '#/components/parameters/id'
-      - { name: userId, in: path, required: true, schema: { type: integer } }
+    - $ref: '#/components/parameters/id'
+    - name: userId
+      in: path
+      required: true
+      schema:
+        type: integer
     delete:
-      tags: [Content views]
+      tags:
+      - Content views
       summary: Remove the watched mark of a user
       responses:
-        '204': { description: Removed }
-        '404': { $ref: '#/components/responses/NotFound' }
-
+        '204':
+          description: Removed
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /reports/users-most-courses:
     get:
-      tags: [Reports]
+      tags:
+      - Reports
       summary: SQL 01 - Users ranked by number of courses
       responses:
         '200':
@@ -321,13 +902,22 @@ paths:
                 items:
                   type: object
                   properties:
-                    id: { type: integer }
-                    name: { type: string }
-                    email: { type: string }
-                    total_courses: { type: integer }
+                    id:
+                      type: integer
+                    name:
+                      type: string
+                    email:
+                      type: string
+                    total_courses:
+                      type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /reports/course-most-contents:
     get:
-      tags: [Reports]
+      tags:
+      - Reports
       summary: SQL 02 - Course(s) with the most contents (ties included)
       responses:
         '200':
@@ -339,13 +929,22 @@ paths:
                 items:
                   type: object
                   properties:
-                    id: { type: integer }
-                    code: { type: string }
-                    title: { type: string }
-                    total_contents: { type: integer }
+                    id:
+                      type: integer
+                    code:
+                      type: string
+                    title:
+                      type: string
+                    total_contents:
+                      type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /reports/courses-summary:
     get:
-      tags: [Reports]
+      tags:
+      - Reports
       summary: SQL 03 - Courses with total of modules and contents
       responses:
         '200':
@@ -357,14 +956,24 @@ paths:
                 items:
                   type: object
                   properties:
-                    id: { type: integer }
-                    code: { type: string }
-                    title: { type: string }
-                    total_modules: { type: integer }
-                    total_contents: { type: integer }
+                    id:
+                      type: integer
+                    code:
+                      type: string
+                    title:
+                      type: string
+                    total_modules:
+                      type: integer
+                    total_contents:
+                      type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /reports/contents-with-course:
     get:
-      tags: [Reports]
+      tags:
+      - Reports
       summary: SQL 04 - Contents with their course name
       responses:
         '200':
@@ -376,193 +985,689 @@ paths:
                 items:
                   type: object
                   properties:
-                    id: { type: integer }
-                    content_title: { type: string }
-                    module_id: { type: integer }
-                    module_title: { type: string }
-                    course_id: { type: integer }
-                    course_title: { type: string }
+                    id:
+                      type: integer
+                    content_title:
+                      type: string
+                    module_id:
+                      type: integer
+                    module_title:
+                      type: string
+                    course_id:
+                      type: integer
+                    course_title:
+                      type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /reports/content-viewers/{id}:
     get:
-      tags: [Reports]
-      summary: SQL 05 - Users who watched a content (e.g. id = 2)
-      parameters: [{ $ref: '#/components/parameters/id' }]
+      tags:
+      - Reports
+      summary: SQL 05 - Users who completed a content
+      parameters:
+      - $ref: '#/components/parameters/id'
       responses:
         '200':
           description: OK
-          content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Viewer' } } } }
-
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Viewer'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /reports/course-completion:
+    get:
+      tags:
+      - Reports
+      summary: SQL 06 - Completion per course
+      responses:
+        '200':
+          description: Rows
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    code:
+                      type: string
+                    title:
+                      type: string
+                    total_contents:
+                      type: integer
+                    learners:
+                      type: integer
+                    completions:
+                      type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
 components:
   parameters:
-    id: { name: id, in: path, required: true, schema: { type: integer, minimum: 1 } }
-    page: { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
-    limit: { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
-    search: { name: search, in: query, schema: { type: string }, description: Case-insensitive text search }
-
+    id:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    search:
+      name: search
+      in: query
+      schema:
+        type: string
+      description: Case-insensitive text search
+    userId:
+      name: userId
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
   requestBodies:
     User:
       required: true
       content:
         application/json:
           schema:
-            allOf: [{ $ref: '#/components/schemas/UserInput' }]
-            required: [name, email]
+            allOf:
+            - $ref: '#/components/schemas/UserInput'
+            required:
+            - name
+            - email
+            - password
     Course:
       required: true
       content:
         application/json:
           schema:
-            allOf: [{ $ref: '#/components/schemas/CourseInput' }]
-            required: [code, title, user_id]
+            allOf:
+            - $ref: '#/components/schemas/CourseInput'
+            required:
+            - code
+            - title
+            - user_id
     Module:
       required: true
       content:
         application/json:
           schema:
-            allOf: [{ $ref: '#/components/schemas/ModuleInput' }]
-            required: [course_id, user_id, title]
+            allOf:
+            - $ref: '#/components/schemas/ModuleInput'
+            required:
+            - course_id
+            - user_id
+            - title
     Content:
       required: true
       content:
         application/json:
           schema:
-            allOf: [{ $ref: '#/components/schemas/ContentInput' }]
-            required: [module_id, title, content]
-
+            allOf:
+            - $ref: '#/components/schemas/ContentInput'
+            required:
+            - module_id
+            - title
+            - content
   responses:
     NotFound:
       description: Resource not found
-      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
     ValidationError:
       description: Invalid input
-      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
     Conflict:
       description: Unique or foreign key constraint violated
-      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
-
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Missing, invalid or expired session
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Forbidden:
+      description: Signed in without the required role
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    TooManyRequests:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
   schemas:
     Timestamps:
       type: object
       properties:
-        created_at: { type: string, format: date-time, readOnly: true }
-        updated_at: { type: string, format: date-time, readOnly: true }
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
     Meta:
       type: object
       properties:
-        page: { type: integer, example: 1 }
-        limit: { type: integer, example: 20 }
-        total: { type: integer, example: 5 }
-        total_pages: { type: integer, example: 1 }
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 20
+        total:
+          type: integer
+          example: 5
+        total_pages:
+          type: integer
+          example: 1
     Error:
       type: object
       properties:
         error:
           type: object
           properties:
-            status: { type: integer, example: 400 }
-            message: { type: string, example: Validation failed }
+            status:
+              type: integer
+              example: 400
+            message:
+              type: string
+              example: Validation failed
             details:
               oneOf:
-                - type: array
-                  items:
-                    type: object
-                    properties: { field: { type: string }, message: { type: string } }
-                - type: object
-
-    UserStatus: { type: string, enum: [active, inactive] }
+              - type: array
+                items:
+                  type: object
+                  properties:
+                    field:
+                      type: string
+                    message:
+                      type: string
+              - type: object
+    UserStatus:
+      type: string
+      enum:
+      - active
+      - inactive
     UserInput:
       type: object
       properties:
-        name: { type: string, minLength: 2, maxLength: 120, example: Jane Doe }
-        email: { type: string, format: email, example: jane@example.com }
-        status: { $ref: '#/components/schemas/UserStatus' }
+        name:
+          type: string
+          minLength: 2
+          maxLength: 120
+          example: Jane Doe
+        email:
+          type: string
+          format: email
+          example: jane@example.com
+        status:
+          $ref: '#/components/schemas/UserStatus'
+        role:
+          $ref: '#/components/schemas/UserRole'
+        password:
+          type: string
+          format: password
+          writeOnly: true
+          minLength: 8
+          description: Required on create. Optional on update (omit to keep the current one). Needs a letter and
+            a number.
     User:
       allOf:
-        - type: object
-          properties:
-            id: { type: integer, example: 1 }
-            courses_count: { type: integer, readOnly: true }
-        - $ref: '#/components/schemas/UserInput'
-        - $ref: '#/components/schemas/Timestamps'
+      - type: object
+        properties:
+          id:
+            type: integer
+            example: 1
+          courses_count:
+            type: integer
+            readOnly: true
+          completed_lessons:
+            type: integer
+            readOnly: true
+          last_login_at:
+            type: string
+            format: date-time
+            nullable: true
+            readOnly: true
+      - $ref: '#/components/schemas/UserInput'
+      - $ref: '#/components/schemas/Timestamps'
     UserList:
       type: object
       properties:
-        data: { type: array, items: { $ref: '#/components/schemas/User' } }
-        meta: { $ref: '#/components/schemas/Meta' }
-
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+        meta:
+          $ref: '#/components/schemas/Meta'
     CourseInput:
       type: object
       properties:
-        code: { type: string, maxLength: 30, example: NODE-201, description: Unique code (stored uppercase) }
-        title: { type: string, maxLength: 150, example: Advanced Node.js }
-        description: { type: string, nullable: true }
-        user_id: { type: integer, example: 1, description: User who created the course }
+        code:
+          type: string
+          maxLength: 30
+          example: NODE-201
+          description: Unique code (stored uppercase)
+        title:
+          type: string
+          maxLength: 150
+          example: Advanced Node.js
+        description:
+          type: string
+          nullable: true
+        user_id:
+          type: integer
+          example: 1
+          description: User who created the course
+        published:
+          type: boolean
+          default: true
+          description: Unpublished courses are hidden from students
     Course:
       allOf:
-        - type: object
-          properties:
-            id: { type: integer }
-            user_name: { type: string, readOnly: true }
-            modules_count: { type: integer, readOnly: true }
-            contents_count: { type: integer, readOnly: true }
-        - $ref: '#/components/schemas/CourseInput'
-        - $ref: '#/components/schemas/Timestamps'
+      - type: object
+        properties:
+          id:
+            type: integer
+          user_name:
+            type: string
+            readOnly: true
+          modules_count:
+            type: integer
+            readOnly: true
+          contents_count:
+            type: integer
+            readOnly: true
+      - $ref: '#/components/schemas/CourseInput'
+      - $ref: '#/components/schemas/Timestamps'
     CourseList:
       type: object
       properties:
-        data: { type: array, items: { $ref: '#/components/schemas/Course' } }
-        meta: { $ref: '#/components/schemas/Meta' }
-
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Course'
+        meta:
+          $ref: '#/components/schemas/Meta'
     ModuleInput:
       type: object
       properties:
-        course_id: { type: integer, example: 1 }
-        user_id: { type: integer, example: 1, description: User who created the module }
-        title: { type: string, maxLength: 150, example: Streams and Buffers }
-        description: { type: string, nullable: true }
+        course_id:
+          type: integer
+          example: 1
+        user_id:
+          type: integer
+          example: 1
+          description: User who created the module
+        title:
+          type: string
+          maxLength: 150
+          example: Streams and Buffers
+        description:
+          type: string
+          nullable: true
     Module:
       allOf:
-        - type: object
-          properties:
-            id: { type: integer }
-            course_title: { type: string, readOnly: true }
-            user_name: { type: string, readOnly: true }
-            contents_count: { type: integer, readOnly: true }
-        - $ref: '#/components/schemas/ModuleInput'
-        - $ref: '#/components/schemas/Timestamps'
+      - type: object
+        properties:
+          id:
+            type: integer
+          course_title:
+            type: string
+            readOnly: true
+          user_name:
+            type: string
+            readOnly: true
+          contents_count:
+            type: integer
+            readOnly: true
+      - $ref: '#/components/schemas/ModuleInput'
+      - $ref: '#/components/schemas/Timestamps'
     ModuleList:
       type: object
       properties:
-        data: { type: array, items: { $ref: '#/components/schemas/Module' } }
-        meta: { $ref: '#/components/schemas/Meta' }
-
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Module'
+        meta:
+          $ref: '#/components/schemas/Meta'
     ContentInput:
       type: object
       properties:
-        module_id: { type: integer, example: 1 }
-        title: { type: string, maxLength: 150, example: Readable streams }
-        content: { type: string, example: Lesson body, video URL or markdown. }
+        module_id:
+          type: integer
+          example: 1
+        title:
+          type: string
+          maxLength: 150
+          example: Readable streams
+        content:
+          type: string
+          example: Lesson summary shown under the player.
+        video_url:
+          type: string
+          nullable: true
+          example: https://youtu.be/ENrzD9HAZK4
+          description: Any YouTube URL (watch, youtu.be, embed, shorts) or video id. Stored as https://www.youtube.com/watch?v=<id>
+        duration_seconds:
+          type: integer
+          nullable: true
+          minimum: 1
+        position:
+          type: integer
+          minimum: 0
+          default: 0
+          description: Order inside the module
     Content:
       allOf:
-        - type: object
-          properties:
-            id: { type: integer }
-            module_title: { type: string, readOnly: true }
-            course_id: { type: integer, readOnly: true }
-            course_title: { type: string, readOnly: true }
-            views_count: { type: integer, readOnly: true }
-        - $ref: '#/components/schemas/ContentInput'
-        - $ref: '#/components/schemas/Timestamps'
+      - type: object
+        properties:
+          id:
+            type: integer
+          module_title:
+            type: string
+            readOnly: true
+          course_id:
+            type: integer
+            readOnly: true
+          course_title:
+            type: string
+            readOnly: true
+          views_count:
+            type: integer
+            readOnly: true
+      - $ref: '#/components/schemas/ContentInput'
+      - $ref: '#/components/schemas/Timestamps'
     ContentList:
       type: object
       properties:
-        data: { type: array, items: { $ref: '#/components/schemas/Content' } }
-        meta: { $ref: '#/components/schemas/Meta' }
-
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Content'
+        meta:
+          $ref: '#/components/schemas/Meta'
     Viewer:
       type: object
       properties:
-        id: { type: integer }
-        name: { type: string }
-        email: { type: string }
-        watched_at: { type: string, format: date-time }
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        watched_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+    UserRole:
+      type: string
+      enum:
+      - student
+      - admin
+    SessionUser:
+      allOf:
+      - type: object
+        properties:
+          id:
+            type: integer
+          last_login_at:
+            type: string
+            format: date-time
+            nullable: true
+      - $ref: '#/components/schemas/UserInput'
+      - $ref: '#/components/schemas/Timestamps'
+    Session:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/SessionUser'
+        token:
+          type: string
+          description: JWT (HS256). Also set as httpOnly cookie.
+        expires_in:
+          type: integer
+          example: 28800
+    LessonProgress:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        module_id:
+          type: integer
+        video_url:
+          type: string
+          nullable: true
+        duration_seconds:
+          type: integer
+          nullable: true
+        position:
+          type: integer
+        position_seconds:
+          type: integer
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        last_activity_at:
+          type: string
+          format: date-time
+          nullable: true
+    CatalogCourse:
+      type: object
+      properties:
+        id:
+          type: integer
+        code:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        published:
+          type: boolean
+        author_name:
+          type: string
+        modules_count:
+          type: integer
+        lessons_count:
+          type: integer
+        total_seconds:
+          type: integer
+        completed_lessons:
+          type: integer
+        started_lessons:
+          type: integer
+        last_activity_at:
+          type: string
+          format: date-time
+          nullable: true
+        cover_video_url:
+          type: string
+          nullable: true
+    CourseOutline:
+      allOf:
+      - $ref: '#/components/schemas/CatalogCourse'
+      - type: object
+        properties:
+          next_lesson_id:
+            type: integer
+            nullable: true
+          modules:
+            type: array
+            items:
+              type: object
+              properties:
+                id:
+                  type: integer
+                title:
+                  type: string
+                description:
+                  type: string
+                  nullable: true
+                lessons:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/LessonProgress'
+    Lesson:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        content:
+          type: string
+        video_url:
+          type: string
+          nullable: true
+        duration_seconds:
+          type: integer
+          nullable: true
+        module_id:
+          type: integer
+        module_title:
+          type: string
+        course:
+          type: object
+          properties:
+            id:
+              type: integer
+            code:
+              type: string
+            title:
+              type: string
+        position_seconds:
+          type: integer
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        index:
+          type: integer
+          description: 1-based position in the course
+        total:
+          type: integer
+        previous_lesson_id:
+          type: integer
+          nullable: true
+        next_lesson_id:
+          type: integer
+          nullable: true
+    ProgressInput:
+      type: object
+      properties:
+        position_seconds:
+          type: integer
+          minimum: 0
+          description: Resume position
+        completed:
+          type: boolean
+          description: true marks as completed (keeps the first date), false clears it
+    Progress:
+      type: object
+      properties:
+        content_id:
+          type: integer
+        position_seconds:
+          type: integer
+        watched_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        updated_at:
+          type: string
+          format: date-time
+    Summary:
+      type: object
+      properties:
+        completed_lessons:
+          type: integer
+        watched_seconds:
+          type: integer
+        courses_in_progress:
+          type: integer
+        courses_completed:
+          type: integer
+        resume:
+          nullable: true
+          type: object
+          properties:
+            id:
+              type: integer
+            title:
+              type: string
+            video_url:
+              type: string
+              nullable: true
+            duration_seconds:
+              type: integer
+              nullable: true
+            position_seconds:
+              type: integer
+            course_id:
+              type: integer
+            course_title:
+              type: string
+            updated_at:
+              type: string
+              format: date-time
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: synctech_session
+security:
+- bearerAuth: []
+- cookieAuth: []

@@ -21,6 +21,10 @@ services:
       PORT: 3333
       DATABASE_URL: postgres://postgres:postgres@db:5432/courses
       RUN_MIGRATIONS: "true"
+      # Local only. Generate a real secret for any shared environment: openssl rand -base64 48
+      JWT_SECRET: ${JWT_SECRET:-local-docker-secret-not-for-production-use-0001}
+      # Plain HTTP on localhost: Safari rejects Secure cookies there.
+      COOKIE_SECURE: "false"
       # Seeds truncate every table; set to "false" to keep data between restarts.
       RUN_SEEDS: ${RUN_SEEDS:-true}
     ports:

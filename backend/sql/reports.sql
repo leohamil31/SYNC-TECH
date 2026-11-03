@@ -1,5 +1,5 @@
 -- =====================================================================
--- Reports - Course Manager
+-- Reports - SyncTech
 -- The same queries are exposed by the API under /api/reports/*
 -- (see src/services/report.service.js).
 -- =====================================================================
@@ -63,18 +63,37 @@ SELECT
 FROM contents ct
 INNER JOIN modules m ON m.id = ct.module_id
 INNER JOIN courses c ON c.id = m.course_id
-ORDER BY c.id, m.id, ct.id;
+ORDER BY c.id, m.id, ct.position, ct.id;
 
 
--- SQL 05 - Which users have already watched the lesson (content ID = 2)?
--- Modeled with the N:N table content_views (user_id, content_id, watched_at)
--- with a UNIQUE (user_id, content_id) constraint.
+-- SQL 05 - Which users have completed the lesson (content ID = 2)?
+-- content_views (user_id, content_id, watched_at, position_seconds, completed_at)
+-- is the N:N progress table with UNIQUE (user_id, content_id).
+-- A row exists once a lesson is started; completed_at marks it as finished.
 SELECT
   u.id,
   u.name,
   u.email,
-  cv.watched_at
+  cv.watched_at,
+  cv.completed_at
 FROM content_views cv
 INNER JOIN users u ON u.id = cv.user_id
 WHERE cv.content_id = 2
-ORDER BY cv.watched_at, u.name;
+  AND cv.completed_at IS NOT NULL
+ORDER BY cv.completed_at, u.name;
+
+
+-- SQL 06 - Completion per course: distinct learners and completed lessons.
+SELECT
+  c.id,
+  c.code,
+  c.title,
+  COUNT(DISTINCT ct.id)     AS total_contents,
+  COUNT(DISTINCT cv.user_id) AS learners,
+  COUNT(cv.completed_at)    AS completions
+FROM courses c
+LEFT JOIN modules m ON m.course_id = c.id
+LEFT JOIN contents ct ON ct.module_id = m.id
+LEFT JOIN content_views cv ON cv.content_id = ct.id
+GROUP BY c.id, c.code, c.title
+ORDER BY completions DESC, c.id;

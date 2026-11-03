@@ -13,6 +13,8 @@ const HttpError = require('../utils/http-error');
  * @param {string[]} [options.searchColumns]  Columns matched by `?search=`.
  * @param {Record<string, string>} [options.filters] Query param -> qualified column.
  * @param {[string, 'asc'|'desc'][]} [options.orderBy]
+ * @param {(payload: object) => Promise<object>|object} [options.prepare]
+ *        Maps a validated payload to table columns before insert/update (e.g. hashing a password).
  */
 const createCrudService = ({
   table,
@@ -22,6 +24,7 @@ const createCrudService = ({
   searchColumns = [],
   filters = {},
   orderBy = [[`${alias}.id`, 'asc']],
+  prepare = (payload) => payload,
 }) => {
   const applyFilters = (query, params) => {
     Object.entries(filters).forEach(([param, column]) => {
@@ -57,14 +60,14 @@ const createCrudService = ({
   };
 
   const create = async (payload) => {
-    const [{ id }] = await db(table).insert(payload).returning('id');
+    const [{ id }] = await db(table).insert(await prepare(payload)).returning('id');
     return findById(id);
   };
 
   const update = async (id, payload) => {
     const affected = await db(table)
       .where({ id })
-      .update({ ...payload, updated_at: db.fn.now() });
+      .update({ ...(await prepare(payload)), updated_at: db.fn.now() });
     if (!affected) throw HttpError.notFound(`${label} ${id} not found`);
     return findById(id);
   };

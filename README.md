@@ -1,285 +1,187 @@
-# Course Manager
+# SyncTech
 
-Online course management system built for the **XPTO practical test (Node.js + React.js)**.
+Plataforma de cursos em vídeo com área do aluno (catálogo, player de aulas e progresso salvo automaticamente) e área administrativa (usuários, cursos, módulos, aulas e relatórios).
 
-- **API**: Node.js, Express 5, Knex (migrations and seeds), PostgreSQL, Zod validation
-- **Web**: React 18, React Router, Vite, Framer Motion. SyncTech visual identity (glass surfaces, 3D animated logo, page and list transitions), English / Português (BR) and light / dark theme chosen in the sidebar. Animations respect the OS "reduce motion" setting
-- **Docs**: OpenAPI 3 / Swagger UI at `/api/docs`, Postman collection with tests
-- **Infra**: Docker (multi-stage), Docker Compose, Heroku (container stack), GitHub Actions CI
-- **Live demo**: https://leohamil31.github.io/XPTO-TI/ (static, see [GitHub Pages](#github-pages-static-demo))
+- **API**: Node.js 20+, Express 5, Knex (migrations e seeds), PostgreSQL, Zod. Autenticação JWT HS256 em cookie httpOnly + controle de acesso por papel (`student` / `admin`).
+- **Web**: React 18, React Router, Vite, Framer Motion. Design system preto e roxo com superfícies de vidro (`GlassView`), PT-BR e EN.
+- **Docs**: OpenAPI 3 / Swagger UI em `/api/docs` (botão **Authorize** aceita o token do login).
+- **Infra**: Docker multi-stage, Docker Compose, Heroku (container stack), GitHub Actions.
 
-![Dashboard](docs/screenshots/dashboard-en.png)
-
-## Contents
-
-- [Quick start (Docker)](#quick-start-docker)
-- [Local development](#local-development)
-- [Database (DER, migrations, seeds)](#database)
-- [SQL reports](#sql-reports)
-- [Who watched a lesson](#who-watched-a-lesson-content-id--2)
-- [API](#api)
-- [Tests](#tests)
-- [Deploy to Heroku](#deploy-to-heroku)
-- [GitHub Pages (static demo)](#github-pages-static-demo)
-- [Project structure](#project-structure)
-
-## Quick start (Docker)
-
-Requirements: Docker with Compose (on Windows use WSL2 + Ubuntu).
+## Início rápido (Docker)
 
 ```bash
 docker compose up --build
 ```
 
-| URL | What |
+| URL | O quê |
 | --- | --- |
-| http://localhost:3333 | React app |
+| http://localhost:3333 | Aplicação web |
 | http://localhost:3333/api/docs | Swagger UI |
-| http://localhost:3333/api/docs.json | OpenAPI document |
 
-The container runs the migrations and the seeds on start. Seeds truncate the tables,
-so use `RUN_SEEDS=false docker compose up` to keep your data between restarts.
+O container roda migrations e seeds ao subir. Os seeds **apagam todas as tabelas**; use `RUN_SEEDS=false docker compose up` para manter seus dados.
 
-## Local development
+### Contas de exemplo
 
-Requirements: Node.js 20+ and PostgreSQL 14+ (or only the database from Compose: `docker compose up db`).
+Todas usam a senha `SyncTech@2026` (variável `SEED_PASSWORD`).
+
+| E-mail | Papel |
+| --- | --- |
+| alice@example.com | admin |
+| bruno@example.com, carla@example.com, daniel@example.com | aluno |
+| eva@example.com | aluno inativo (não consegue entrar) |
+
+## Desenvolvimento local
+
+Requisitos: Node.js 20+ e PostgreSQL 14+ (ou só o banco do Compose: `docker compose up db`).
 
 ```bash
 cd backend
 cp .env.example .env
 npm install
-npm run migrate
-npm run seed
+npm run migrate && npm run seed
 npm run dev          # http://localhost:3333
 ```
 
 ```bash
 cd frontend
 npm install
-npm run dev          # http://localhost:5173 (proxies /api to :3333)
+npm run dev          # http://localhost:5173 (proxy de /api para :3333)
 ```
 
-Useful scripts (backend): `npm run db:reset` (rollback + migrate + seed), `npm run migrate:rollback`, `npm test`.
+Em desenvolvimento a tela de login mostra atalhos para as contas de exemplo.
 
-## Database
+## Variáveis de ambiente (backend)
 
-Full diagram and design decisions: **[docs/DER.md](docs/DER.md)**.
+| Variável | Padrão | Uso |
+| --- | --- | --- |
+| `DATABASE_URL` | `postgres://postgres:postgres@localhost:5432/courses` | Conexão |
+| `DATABASE_SSL` | `false` | `true` no Heroku Postgres |
+| `JWT_SECRET` | segredo de dev | **Obrigatório em produção, mín. 32 caracteres.** A API não sobe sem ele. |
+| `JWT_TTL_SECONDS` | `28800` (8 h) | Duração da sessão |
+| `ALLOW_SIGNUP` | `true` | `false` desativa o cadastro público (admins continuam criando contas) |
+| `COOKIE_SECURE` | `true` em produção | `false` apenas em HTTP puro (Docker local) |
+| `TRUST_PROXY` | `1` em produção | Número de proxies na frente da app (para IP correto no rate limit) |
+| `SEED_PASSWORD` | `SyncTech@2026` | Senha das contas criadas pelo seed |
 
-```mermaid
-erDiagram
-    USERS ||--o{ COURSES : creates
-    USERS ||--o{ MODULES : creates
-    COURSES ||--|{ MODULES : has
-    MODULES ||--|{ CONTENTS : has
-    USERS ||--o{ CONTENT_VIEWS : watches
-    CONTENTS ||--o{ CONTENT_VIEWS : "watched in"
-```
+## Arquitetura
 
-**Migrations** (`backend/src/db/migrations`, Knex): `users`, `courses`, `modules`, `contents`, `content_views`.
-Every table has `created_at`/`updated_at`; `courses` and `modules` have `user_id` pointing to the user who created them.
+### Controle de acesso
 
-**Seeds** (`backend/src/db/seeds/01_initial_data.js`), deterministic:
+| Rotas | Quem acessa |
+| --- | --- |
+| `POST /api/auth/login`, `/register`, `/logout` | Público (login e cadastro com limite de 10 tentativas / 15 min por IP) |
+| `GET /api/auth/me`, `/api/me/**` | Qualquer usuário autenticado (área do aluno) |
+| `/api/users`, `/courses`, `/modules`, `/contents`, `/reports/**` | Somente `admin` |
 
-| Course | Modules | Contents per module | Total contents | Author |
-| --- | --- | --- | --- | --- |
-| NODE-101 Node.js Fundamentals | 5 | 3 | 15 | Alice |
-| REACT-101 React from Scratch | 3 | 5 | 15 | Bruno |
-| SQL-101 PostgreSQL Essentials | 2 | 4 | 8 | Alice |
-| DOCKER-101 Docker for Developers | 1 | 2 | 2 | Alice |
-| GIT-101 Git and GitHub | 1 | 1 | 1 | Carla |
+- O token vai em cookie `httpOnly; SameSite=Strict` (o JavaScript nunca o lê, e o SameSite bloqueia CSRF). Clientes de API podem usar `Authorization: Bearer <token>`, também retornado no login.
+- Papel e status são relidos do banco a cada requisição: rebaixar ou desativar alguém vale na hora.
+- O cadastro público sempre cria `student`. Um admin não pode excluir, desativar ou rebaixar a própria conta.
+- Cursos com `published = false` não aparecem para alunos (respondem 404) e podem ser pré-visualizados por admins.
+- No frontend, `RequireAuth` e `RequireRole` protegem as rotas `/app/**` e `/admin/**`. O código do painel admin é carregado sob demanda (lazy).
 
-Plus 5 users (one inactive) and 6 content views; content **2** was watched by Alice, Carla and Daniel.
-Each module must have at least one content, so "a course with 5 modules and 3 contents" was read as
-3 contents *per module*. Two extra smaller courses make every table have at least 5 records.
+### Progresso do aluno
 
-## SQL reports
+`content_views` guarda uma linha por aluno e aula: `watched_at` (primeiro acesso), `position_seconds` (ponto de retomada) e `completed_at`.
 
-All queries are in **[backend/sql/reports.sql](backend/sql/reports.sql)**, exposed by the API under
-`/api/reports/*` and shown in the **Dashboard** screen (each report has a "Show SQL" button).
+O player usa a YouTube IFrame Player API e salva a posição a cada 10 s de reprodução, ao pausar, ao sair da página e ao esconder a aba (com `fetch keepalive`). A aula é concluída ao chegar a 90% do vídeo, ao terminar ou pelo botão "Marcar como concluída". Se o script do YouTube não carregar, um embed simples é exibido.
 
-**SQL 01 - users with the most courses**
+| Método | Rota | Descrição |
+| --- | --- | --- |
+| GET | `/me/summary` | Totais e a aula para retomar |
+| GET | `/me/courses?search=` | Catálogo com progresso |
+| GET | `/me/courses/:id` | Módulos, aulas, status e próxima aula |
+| GET | `/me/lessons/:id` | Dados do player, posição, anterior e próxima |
+| PUT | `/me/lessons/:id/progress` | `{ position_seconds?, completed? }` |
+| DELETE | `/me/lessons/:id/progress` | Reinicia a aula |
 
-```sql
-SELECT u.id, u.name, u.email, COUNT(c.id) AS total_courses
-FROM users u
-LEFT JOIN courses c ON c.user_id = u.id
-GROUP BY u.id, u.name, u.email
-ORDER BY total_courses DESC, u.name ASC;
-```
+### Banco de dados
 
-**SQL 02 - course with the most contents** (`RANK()` returns every course tied in first place;
-with the seed data NODE-101 and REACT-101 both have 15)
+Diagrama e decisões: **[docs/DER.md](docs/DER.md)**. As três migrations de 2026-11-04 são aditivas (não alteram as originais), então bancos existentes migram com `npm run migrate`. Registros antigos de `content_views` são marcados como concluídos.
 
-```sql
-SELECT id, code, title, total_contents
-FROM (
-  SELECT c.id, c.code, c.title,
-         COUNT(ct.id) AS total_contents,
-         RANK() OVER (ORDER BY COUNT(ct.id) DESC) AS position
-  FROM courses c
-  LEFT JOIN modules m ON m.course_id = c.id
-  LEFT JOIN contents ct ON ct.module_id = m.id
-  GROUP BY c.id, c.code, c.title
-) ranked
-WHERE position = 1;
-```
+O seed cria 5 cursos, 10 módulos e **18 aulas com vídeos reais do YouTube** sobre o tema de cada aula (Fireship, Curso em Vídeo, Willian Justen, Code Bootcamp, JSConf). A lista com os IDs está em `backend/src/db/seeds/01_initial_data.js`.
 
-**SQL 03 - all courses with total of modules and contents (1 query)**
+### Relatórios SQL
 
-```sql
-SELECT c.id, c.code, c.title,
-       COUNT(DISTINCT m.id) AS total_modules,
-       COUNT(ct.id)         AS total_contents
-FROM courses c
-LEFT JOIN modules m ON m.course_id = c.id
-LEFT JOIN contents ct ON ct.module_id = m.id
-GROUP BY c.id, c.code, c.title
-ORDER BY c.id;
-```
+Em **[backend/sql/reports.sql](backend/sql/reports.sql)**, expostos em `/api/reports/*` e na Visão geral do admin (cada um com o botão "Ver SQL"): autores com mais cursos, curso com mais aulas (com empates), módulos e aulas por curso, aulas com o curso, quem concluiu uma aula e conclusão por curso.
 
-**SQL 04 - all contents with the course name (1 query)**
-
-```sql
-SELECT ct.id, ct.title AS content_title, m.title AS module_title, c.title AS course_title
-FROM contents ct
-INNER JOIN modules m ON m.id = ct.module_id
-INNER JOIN courses c ON c.id = m.course_id
-ORDER BY c.id, m.id, ct.id;
-```
-
-## Who watched a lesson (content ID = 2)
-
-Extra columns would not work: one content is watched by many users and one user watches many
-contents (N:N). So a new table was created:
+## Estrutura
 
 ```text
-content_views (id, user_id FK, content_id FK, watched_at, created_at, updated_at)
-UNIQUE (user_id, content_id)
+backend/src/
+  config/env.js               variáveis e validação do JWT_SECRET
+  db/migrations, db/seeds
+  middlewares/                auth (authenticate/authorize), rate-limit, validate, error-handler
+  services/                   CRUD genérico, auth, learner (progresso), relatórios
+  routes/index.js             mapa de rotas e guardas por papel
+  utils/                      jwt (HS256), password (scrypt), youtube
+  validators/schemas.js       Zod
+  docs/openapi.yaml
+
+frontend/src/
+  app/                        App (rotas) e guards
+  design-system/
+    styles/tokens.css         cores, tipografia, espaçamento, raios, motion
+    styles/base.css, components.css
+    GlassView.jsx             vidro fosco com a API do expo-glass-effect
+    Modal, Toast, Confirm, Progress, Feedback, Icon, Avatar
+    motion/                   variantes e componentes de animação
+    brand/                    logo 3D e splash
+  shell/                      AppShell responsivo (sidebar / top bar + tab bar), navegação
+  features/
+    auth/                     AuthProvider, login, cadastro
+    learner/                  início, catálogo, curso, player (YouTubePlayer, CourseOutline)
+    admin/                    visão geral, CRUD genérico, editor de curso, detalhes da aula
+  shared/                     cliente HTTP, hooks, i18n, utilitários
 ```
 
-```sql
-SELECT u.id, u.name, u.email, cv.watched_at
-FROM content_views cv
-INNER JOIN users u ON u.id = cv.user_id
-WHERE cv.content_id = 2
-ORDER BY cv.watched_at, u.name;
-```
+Para mudar a identidade visual, edite `design-system/styles/tokens.css`. Cada feature importa apenas o próprio CSS.
 
-In the app, open a content (e.g. `/contents/2`) to mark/unmark users as viewers.
+### Animações
 
-## API
-
-Base path `/api`. Full contract in Swagger (`/api/docs`) and in
-[docs/postman/course-manager.postman_collection.json](docs/postman/course-manager.postman_collection.json).
-
-| Method | Route | Description |
+| Onde | O quê | Arquivo |
 | --- | --- | --- |
-| GET | `/users`, `/courses`, `/modules`, `/contents` | Paginated list (`page`, `limit`, `search` + filters) |
-| GET | `/{resource}/:id` | Get one |
-| POST | `/{resource}` | Create |
-| PUT | `/{resource}/:id` | Replace |
-| PATCH | `/{resource}/:id` | Partial update |
-| DELETE | `/{resource}/:id` | Delete |
-| GET | `/contents/:id/views` | Users who watched the content |
-| POST | `/contents/:id/views` | Mark as watched `{ "user_id": 1 }` (idempotent) |
-| DELETE | `/contents/:id/views/:userId` | Unmark |
-| GET | `/reports/users-most-courses` | SQL 01 |
-| GET | `/reports/course-most-contents` | SQL 02 |
-| GET | `/reports/courses-summary` | SQL 03 |
-| GET | `/reports/contents-with-course` | SQL 04 |
-| GET | `/reports/content-viewers/:id` | SQL 05 |
-| GET | `/health` | Health check |
+| Todo o app | Luzes roxas em movimento lento e brilho que segue o cursor (desktop) | `design-system/AmbientBackground.jsx` |
+| Títulos das páginas iniciais | Palavras que se montam uma a uma | `design-system/motion/TextReveal.jsx` |
+| Início do aluno | Card "continuar assistindo" com zoom da miniatura, botão de play com pulso e textos em sequência | `features/learner/pages/HomePage.jsx` |
+| Cards de curso e KPIs | Inclinação 3D seguindo o mouse, zoom da miniatura, entrada ao rolar | `design-system/motion/useTilt.js`, `Reveal.jsx` |
+| Player | Explosão de partículas ao concluir uma aula | `design-system/motion/Burst.jsx` |
+| Botões primários | Reflexo de luz ao passar o mouse | `styles/components.css` |
+| Navegação | Transição com desfoque entre páginas, indicador de aba com mola | `motion/variants.js`, `shell/AppShell.jsx` |
 
-Filters: `users?status=`, `courses?user_id=`, `modules?course_id=&user_id=`, `contents?module_id=&course_id=`.
+Tudo respeita a configuração "reduzir movimento" do sistema operacional (`MotionConfig reducedMotion="user"` e a regra global em `base.css`).
 
-Lists return `{ "data": [...], "meta": { "page", "limit", "total", "total_pages" } }`.
-Errors return `{ "error": { "status", "message", "details" } }`:
-`400` validation, `404` not found, `409` unique/foreign key violation (e.g. deleting a user who authored courses).
+### Dashboards iniciais
 
-**Postman**: import the collection; `baseUrl` defaults to `http://localhost:3333/api`. Running the whole
-collection (or `npx newman run docs/postman/course-manager.postman_collection.json`) creates a user,
-course, module and content, exercises every route and cleans up after itself.
+- **Aluno (`/app`)**: saudação, card para continuar a aula, três números e até três cursos em andamento (ou sugestões, para quem ainda não começou).
+- **Admin (`/admin`)**: quatro indicadores, conclusão por curso em barras e acessos recentes. Os relatórios SQL completos ficam na aba **Relatórios** (`/admin/reports`).
 
-## Internationalization and theme
+### Sobre `expo-glass-effect`
 
-The interface is available in **English** and **Português (BR)**. Switch with the `EN | PT` control at the
-bottom of the sidebar. The first visit follows the browser language, and the choice is saved in `localStorage`.
-Translations live in `frontend/src/i18n/` and use a small dependency-free provider: `t('key', { params })`,
-date formatting with `Intl`, and translation of the API's validation and constraint messages.
-The API itself stays in English, as the test requires.
+`expo-glass-effect` é um módulo nativo do Expo (React Native, iOS 26) e não roda em uma aplicação web Vite. O efeito é implementado por `GlassView` com `backdrop-filter`, mantendo as mesmas props (`glassEffectStyle: 'regular' | 'clear'`, `tintColor`, `isInteractive`) e o helper `isGlassEffectAPIAvailable()`. Um futuro app Expo pode trocar o import sem mudar as chamadas. Navegadores sem `backdrop-filter` recebem uma superfície sólida.
 
-The sun/moon button switches between light and dark themes. Its first value follows the operating system.
+## Testes
 
-## Tests
-
-Integration tests (Node test runner + Supertest) run against a real PostgreSQL database
-(`TEST_DATABASE_URL`, default `courses_test`), recreating schema and seeds:
+Testes de integração (Node test runner + Supertest) contra PostgreSQL real (`TEST_DATABASE_URL`):
 
 ```bash
 cd backend && npm test
 ```
 
-GitHub Actions (`.github/workflows/ci.yml`) runs the API tests with a Postgres service, builds the
-front-end and builds the Docker image.
+Cobrem login, cookie, token adulterado, permissões por papel, proteção contra auto-bloqueio, CRUD, normalização de URL do YouTube, publicação, progresso e todos os relatórios.
 
-## Deploy to Heroku
-
-The app is a single container: Express serves the API and the React build.
+## Deploy no Heroku
 
 ```bash
-heroku create <app-name>
+heroku create <app>
 heroku stack:set container
 heroku addons:create heroku-postgresql:essential-0
-heroku config:set DATABASE_SSL=true
+heroku config:set DATABASE_SSL=true JWT_SECRET="$(openssl rand -base64 48)"
 git push heroku main
-heroku run ./node_modules/.bin/knex seed:run   # optional sample data
+heroku run ./node_modules/.bin/knex seed:run   # opcional: dados de exemplo
 ```
 
-`heroku.yml` builds the `Dockerfile` and runs the migrations in the release phase.
-Heroku provides `PORT` and `DATABASE_URL`.
+## Mudanças em relação à versão anterior
 
-## GitHub Pages (static demo)
-
-GitHub Pages only hosts static files, so it cannot run Node.js or PostgreSQL. The Pages build
-(`.github/workflows/pages.yml`) compiles the React app with `VITE_DEMO=true`: requests are handled by
-`frontend/src/api/mock.js`, an in-browser implementation of the same API (routes, validation, unique and
-foreign key rules, cascades, reports) loaded with the same seed data and persisted in `localStorage`.
-The normal build does not include it. Swagger is published at `/swagger/`.
-
-Setup once: **Settings → Pages → Build and deployment → Source: GitHub Actions**. Every push to `main`
-deploys again.
-
-## Project structure
-
-```text
-backend/
-  knexfile.js
-  sql/reports.sql             # SQL 01-05
-  src/
-    app.js, server.js
-    config/env.js
-    db/migrations, db/seeds
-    routes/                   # REST routes (generic CRUD router + reports + views)
-    controllers/
-    services/                 # data access (Knex), report queries
-    validators/schemas.js     # Zod schemas
-    middlewares/              # validation, error handling
-    docs/openapi.yaml         # Swagger / OpenAPI 3
-  test/
-frontend/
-  src/
-    api/client.js             # fetch wrapper
-    resources.jsx             # columns/fields/filters of each CRUD screen
-    i18n/                     # en.js, pt-BR.js and the I18nProvider (t(), dates, API error messages)
-    pages/                    # Reports, ResourcePage, CourseDetail, ContentDetail
-    components/, hooks/
-docs/
-  DER.md, postman/, screenshots/
-Dockerfile, docker-compose.yml, heroku.yml
-```
-
-## Screenshots
-
-| Course (PT-BR, dark) | Content viewers (PT-BR) | Validation (PT-BR) |
-| --- | --- | --- |
-| ![Course](docs/screenshots/course-dark-pt.png) | ![Content](docs/screenshots/content-viewers-pt.png) | ![Validation](docs/screenshots/validation-pt.png) |
+- A demo estática do GitHub Pages (`api/mock.js` + `pages.yml`) foi removida. Ela simulava a API no navegador e não pode reproduzir autenticação real com segurança. A aplicação agora exige o backend.
+- A coleção Postman foi removida porque não cobria autenticação. Use o Swagger (`/api/docs`) com o botão Authorize.
+- O tema claro foi removido; a identidade é escura por definição.

@@ -2,7 +2,7 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig({
-  // GitHub Pages serves the app from /<repo>/, set through VITE_BASE.
+  // Set VITE_BASE when the app is served from a sub-path.
   base: process.env.VITE_BASE || '/',
   plugins: [react()],
   build: {
