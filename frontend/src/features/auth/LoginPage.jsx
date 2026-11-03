@@ -6,9 +6,10 @@ import { ErrorAlert } from '../../design-system/Feedback';
 import { useAuth } from './AuthProvider';
 import AuthLayout from './AuthLayout';
 import PasswordInput from './PasswordInput';
+import { DEMO } from '../../shared/api/client';
 
-// Seed accounts, shown only in development builds.
-const DEMO_ACCOUNTS = import.meta.env.DEV
+// Seed accounts, shown in development builds and in the GitHub Pages demo.
+const DEMO_ACCOUNTS = import.meta.env.DEV || DEMO
   ? [
       ['alice@example.com', 'admin'],
       ['bruno@example.com', 'student'],
@@ -69,7 +70,7 @@ export default function LoginPage() {
         </button>
         {DEMO_ACCOUNTS.length > 0 && (
           <div className="demo-hint">
-            {t('auth.demoHint')}{' '}
+            {DEMO ? t('auth.demoHintPages') : t('auth.demoHint')}{' '}
             {DEMO_ACCOUNTS.map(([email, role], i) => (
               <span key={email}>
                 {i > 0 && ', '}

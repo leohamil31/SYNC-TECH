@@ -14,10 +14,11 @@ function SessionCheck() {
 
 /** Renders child routes only for signed-in users; otherwise sends them to /login and back afterwards. */
 export function RequireAuth() {
-  const { status } = useAuth();
+  const { status, signedOut } = useAuth();
   const location = useLocation();
   if (status === 'loading') return <SessionCheck />;
-  if (status === 'anonymous') return <Navigate to="/login" replace state={{ from: location }} />;
+  // Expired session: come back here after signing in. Explicit sign-out: start fresh.
+  if (status === 'anonymous') return <Navigate to="/login" replace state={signedOut ? undefined : { from: location }} />;
   return <Outlet />;
 }
 

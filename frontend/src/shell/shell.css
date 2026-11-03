@@ -149,6 +149,20 @@
   .main { padding: var(--s-5) var(--s-4) calc(var(--tabbar-h) + var(--s-7)); }
 }
 
+.demo-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  margin-bottom: var(--s-5);
+  padding: var(--s-2) var(--s-2) var(--s-2) var(--s-4);
+  border: 1px solid rgba(251, 191, 36, 0.25);
+  border-radius: var(--r-md);
+  background: rgba(251, 191, 36, 0.07);
+  color: #fde68a;
+  font-size: var(--fs-sm);
+}
+.demo-banner > svg { flex: none; }
+
 /* ============ Page header ============ */
 
 .page-header {

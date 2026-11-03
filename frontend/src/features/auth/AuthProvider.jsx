@@ -43,7 +43,8 @@ export function AuthProvider({ children }) {
     try {
       await authApi.logout();
     } finally {
-      setState({ status: 'anonymous', user: null });
+      // `signedOut` tells the guards not to send the next person back to this page.
+      setState({ status: 'anonymous', user: null, signedOut: true });
     }
   }, []);
 
