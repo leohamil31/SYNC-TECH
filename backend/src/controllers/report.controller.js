@@ -6,4 +6,5 @@ module.exports = {
   coursesSummary: async (req, res) => res.json(await reports.coursesSummary()),
   contentsWithCourse: async (req, res) => res.json(await reports.contentsWithCourse()),
   contentViewers: async (req, res) => res.json(await reports.contentViewers(req.params.id)),
+  courseCompletion: async (req, res) => res.json(await reports.courseCompletion()),
 };

@@ -1,8 +1,12 @@
 const db = require('../db/connection');
 const createCrudService = require('./crud.service');
+const { hashPassword } = require('../utils/password');
 
 const count = (table, foreignKey, parent) =>
   db(table).count('*').where(foreignKey, db.ref(parent));
+
+/** Columns safe to expose. password_hash never leaves the database layer. */
+const USER_COLUMNS = ['id', 'name', 'email', 'status', 'role', 'last_login_at', 'created_at', 'updated_at'];
 
 const userService = createCrudService({
   table: 'users',
@@ -10,11 +14,18 @@ const userService = createCrudService({
   label: 'User',
   readQuery: (a) =>
     db(`users as ${a}`).select(
-      `${a}.*`,
+      ...USER_COLUMNS.map((column) => `${a}.${column}`),
       db.raw('(?)::int as courses_count', [count('courses', 'courses.user_id', `${a}.id`)]),
+      db.raw('(?)::int as completed_lessons', [
+        db('content_views')
+          .count('*')
+          .where('content_views.user_id', db.ref(`${a}.id`))
+          .whereNotNull('content_views.completed_at'),
+      ]),
     ),
   searchColumns: ['u.name', 'u.email'],
-  filters: { status: 'u.status' },
+  filters: { status: 'u.status', role: 'u.role' },
+  prepare: async ({ password, ...rest }) => (password ? { ...rest, password_hash: await hashPassword(password) } : rest),
 });
 
 const courseService = createCrudService({
@@ -36,7 +47,7 @@ const courseService = createCrudService({
         ]),
       ),
   searchColumns: ['c.code', 'c.title'],
-  filters: { user_id: 'c.user_id' },
+  filters: { user_id: 'c.user_id', published: 'c.published' },
 });
 
 const moduleService = createCrudService({
@@ -71,11 +82,14 @@ const contentService = createCrudService({
         'm.title as module_title',
         'c.id as course_id',
         'c.title as course_title',
-        db.raw('(?)::int as views_count', [count('content_views', 'content_views.content_id', `${a}.id`)]),
+        // "Views" = learners who completed the lesson.
+        db.raw('(?)::int as views_count', [
+          count('content_views', 'content_views.content_id', `${a}.id`).whereNotNull('content_views.completed_at'),
+        ]),
       ),
   searchColumns: ['ct.title', 'ct.content'],
   filters: { module_id: 'ct.module_id', course_id: 'c.id' },
-  orderBy: [['c.id', 'asc'], ['m.id', 'asc'], ['ct.id', 'asc']],
+  orderBy: [['c.id', 'asc'], ['m.id', 'asc'], ['ct.position', 'asc'], ['ct.id', 'asc']],
 });
 
-module.exports = { userService, courseService, moduleService, contentService };
+module.exports = { userService, courseService, moduleService, contentService, USER_COLUMNS };

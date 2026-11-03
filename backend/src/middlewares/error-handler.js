@@ -4,6 +4,7 @@ const { env } = require('../config/env');
 // PostgreSQL error codes: https://www.postgresql.org/docs/current/errcodes-appendix.html
 const PG_UNIQUE_VIOLATION = '23505';
 const PG_FOREIGN_KEY_VIOLATION = '23503';
+const PG_CHECK_VIOLATION = '23514';
 
 const notFoundHandler = (req, res, next) => {
   next(HttpError.notFound(`Route ${req.method} ${req.originalUrl} not found`));
@@ -26,6 +27,8 @@ const errorHandler = (err, req, res, next) => {
         : 'A referenced record does not exist',
       { constraint: err.constraint, detail: err.detail },
     );
+  } else if (err.code === PG_CHECK_VIOLATION) {
+    error = HttpError.badRequest('A value is outside the allowed range', { constraint: err.constraint });
   } else if (err.type === 'entity.parse.failed') {
     error = HttpError.badRequest('Malformed JSON body');
   }

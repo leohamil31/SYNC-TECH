@@ -1,0 +1,83 @@
+.ambient {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  --px: 50vw;
+  --py: -20vh;
+}
+
+.ambient-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.55;
+  will-change: transform;
+}
+.ambient-blob--a {
+  width: 52vw;
+  height: 52vw;
+  top: -22vw;
+  right: -12vw;
+  background: radial-gradient(circle, rgba(124, 58, 237, 0.55), transparent 65%);
+  animation: drift-a 26s ease-in-out infinite alternate;
+}
+.ambient-blob--b {
+  width: 44vw;
+  height: 44vw;
+  bottom: -20vw;
+  left: -14vw;
+  background: radial-gradient(circle, rgba(147, 51, 234, 0.4), transparent 65%);
+  animation: drift-b 32s ease-in-out infinite alternate;
+}
+.ambient-blob--c {
+  width: 30vw;
+  height: 30vw;
+  top: 38%;
+  left: 42%;
+  background: radial-gradient(circle, rgba(196, 181, 253, 0.16), transparent 65%);
+  animation: drift-c 22s ease-in-out infinite alternate;
+}
+
+/* Cursor spotlight: follows the pointer with a short CSS transition for smoothness. */
+.ambient-spot {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 520px;
+  height: 520px;
+  margin: -260px 0 0 -260px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(124, 58, 237, 0.12), transparent 60%);
+  transform: translate3d(var(--px), var(--py), 0);
+  transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Fine noise keeps the gradients from banding on large dark screens. */
+.ambient-grain {
+  position: absolute;
+  inset: -50%;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+@keyframes drift-a {
+  0% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(-8vw, 6vh, 0) scale(1.12); }
+  100% { transform: translate3d(-3vw, 14vh, 0) scale(0.94); }
+}
+@keyframes drift-b {
+  0% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(10vw, -8vh, 0) scale(1.08); }
+  100% { transform: translate3d(4vw, -16vh, 0) scale(1.15); }
+}
+@keyframes drift-c {
+  0% { transform: translate3d(0, 0, 0) scale(0.9); opacity: 0.35; }
+  100% { transform: translate3d(-12vw, -10vh, 0) scale(1.2); opacity: 0.6; }
+}
+
+@media (max-width: 760px) {
+  .ambient-blob { filter: blur(56px); }
+  .ambient-spot { display: none; }
+}

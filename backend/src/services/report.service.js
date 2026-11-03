@@ -60,23 +60,41 @@ const contentsWithCourse = async () => {
     FROM contents ct
     INNER JOIN modules m ON m.id = ct.module_id
     INNER JOIN courses c ON c.id = m.course_id
-    ORDER BY c.id, m.id, ct.id
+    ORDER BY c.id, m.id, ct.position, ct.id
   `);
   return rows;
 };
 
-// SQL 05 - Users who watched a given content (the test asks for id = 2).
+// SQL 05 - Users who completed a given content.
 const contentViewers = async (contentId) => {
   const { rows } = await db.raw(
     `
-    SELECT u.id, u.name, u.email, cv.watched_at
+    SELECT u.id, u.name, u.email, cv.watched_at, cv.completed_at
     FROM content_views cv
     INNER JOIN users u ON u.id = cv.user_id
     WHERE cv.content_id = ?
-    ORDER BY cv.watched_at, u.name
+      AND cv.completed_at IS NOT NULL
+    ORDER BY cv.completed_at, u.name
   `,
     [contentId],
   );
+  return rows;
+};
+
+// SQL 06 - Completion rate per course (learning analytics for the admin overview).
+const courseCompletion = async () => {
+  const { rows } = await db.raw(`
+    SELECT c.id, c.code, c.title,
+           COUNT(DISTINCT ct.id)::int AS total_contents,
+           COUNT(DISTINCT cv.user_id)::int AS learners,
+           COUNT(cv.completed_at)::int AS completions
+    FROM courses c
+    LEFT JOIN modules m ON m.course_id = c.id
+    LEFT JOIN contents ct ON ct.module_id = m.id
+    LEFT JOIN content_views cv ON cv.content_id = ct.id
+    GROUP BY c.id, c.code, c.title
+    ORDER BY completions DESC, c.id
+  `);
   return rows;
 };
 
@@ -86,4 +104,5 @@ module.exports = {
   coursesSummary,
   contentsWithCourse,
   contentViewers,
+  courseCompletion,
 };

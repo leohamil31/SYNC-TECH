@@ -1,0 +1,72 @@
+.auth {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(360px, 0.85fr);
+  min-height: 100dvh;
+}
+
+.auth-visual {
+  display: grid;
+  place-content: center;
+  gap: var(--s-6);
+  padding: var(--s-7);
+  text-align: center;
+  --fs: clamp(56px, 8vw, 120px);
+}
+.auth-visual .st3d { --fs: inherit; }
+.auth-visual p {
+  margin: 0 auto;
+  max-width: 34ch;
+  font: 300 var(--fs-md) / 1.5 var(--font-display);
+  color: var(--text-muted);
+}
+
+.auth-side {
+  position: relative;
+  display: grid;
+  align-content: center;
+  gap: var(--s-4);
+  padding: var(--s-6) clamp(var(--s-4), 5vw, var(--s-7));
+}
+.auth-lang { position: absolute; top: var(--s-5); right: var(--s-5); }
+
+.auth-card {
+  display: grid;
+  gap: var(--s-4);
+  width: min(420px, 100%);
+  justify-self: center;
+  padding: var(--s-6);
+  border-radius: var(--r-xl);
+  box-shadow: var(--shadow-float);
+}
+.auth-card h1 { font-size: var(--fs-xl); }
+.auth-card .form { margin-top: var(--s-2); }
+.auth-footer { justify-self: center; text-align: center; color: var(--text-muted); font-size: var(--fs-sm); }
+
+.password-field { position: relative; }
+.password-field .icon-btn { position: absolute; right: 4px; top: 4px; }
+
+.demo-hint {
+  padding: var(--s-3);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--r-md);
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+.demo-hint button { padding: 0; border: 0; background: none; color: var(--violet-soft); cursor: pointer; text-decoration: underline; }
+
+.session-check {
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+}
+.session-check .brand-mark { animation: pulse 1.2s var(--ease-out) infinite alternate; }
+@keyframes pulse { from { transform: scale(0.92); opacity: 0.6; } to { transform: scale(1.05); opacity: 1; } }
+
+@media (max-width: 860px) {
+  .auth { grid-template-columns: 1fr; }
+  .auth-visual { padding: var(--s-7) var(--s-4) 0; gap: var(--s-3); --fs: 54px; }
+  .auth-visual p { font-size: var(--fs-base); }
+  .auth-side { align-content: start; padding-top: var(--s-5); }
+  .auth-lang { top: var(--s-4); right: var(--s-4); position: fixed; }
+  .auth-card { padding: var(--s-5); }
+}

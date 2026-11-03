@@ -1,0 +1,83 @@
+/*
+ * SyncTech design tokens.
+ * Change the identity here: every component reads these variables.
+ */
+:root {
+  color-scheme: dark;
+
+  /* Palette */
+  --ink: #0b0b0c;              /* app background */
+  --surface: #121214;          /* panels */
+  --surface-2: #19191d;        /* raised controls */
+  --surface-3: #222228;        /* hover */
+  --line: rgba(255, 255, 255, 0.08);
+  --line-strong: rgba(255, 255, 255, 0.14);
+
+  --violet: #7c3aed;
+  --violet-bright: #9333ea;
+  --violet-soft: #c4b5fd;
+  --violet-glow: rgba(124, 58, 237, 0.45);
+  --violet-wash: rgba(124, 58, 237, 0.14);
+
+  --text: #edebf2;
+  --text-muted: #8e8a99;
+  --text-faint: #5f5b69;
+
+  --done: #34d399;             /* lesson completed: the only green in the UI */
+  --done-wash: rgba(52, 211, 153, 0.12);
+  --danger: #f87171;
+  --danger-wash: rgba(248, 113, 113, 0.12);
+  --warning: #fbbf24;
+
+  --gradient-brand: linear-gradient(135deg, var(--violet) 0%, var(--violet-bright) 100%);
+
+  /* Glass (see GlassView.jsx) */
+  --glass-bg: rgba(22, 20, 28, 0.58);
+  --glass-bg-clear: rgba(22, 20, 28, 0.28);
+  --glass-border: rgba(255, 255, 255, 0.09);
+  --glass-highlight: rgba(255, 255, 255, 0.06);
+  --glass-blur: 22px;
+  --glass-saturate: 160%;
+
+  /* Type */
+  --font-display: 'Sora', 'Geist', system-ui, sans-serif;
+  --font-sans: 'Geist', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, monospace;
+
+  /* Modular scale, ratio 1.25 from 15px */
+  --fs-xs: 0.75rem;
+  --fs-sm: 0.8125rem;
+  --fs-base: 0.9375rem;
+  --fs-md: 1.125rem;
+  --fs-lg: 1.4rem;
+  --fs-xl: 1.75rem;
+  --fs-2xl: clamp(1.9rem, 1.4rem + 1.8vw, 2.6rem);
+
+  /* Space (4px grid) */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+  --s-8: 64px;
+
+  /* Radius follows hierarchy: containers > controls > chips */
+  --r-xl: 24px;
+  --r-lg: 18px;
+  --r-md: 12px;
+  --r-sm: 8px;
+  --r-pill: 999px;
+
+  --shadow-float: 0 24px 60px -20px rgba(0, 0, 0, 0.7), 0 0 0 1px var(--glass-border);
+
+  /* Motion (mirrored in motion/variants.js) */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-fast: 140ms;
+  --dur: 240ms;
+
+  --sidebar-w: 248px;
+  --tabbar-h: 64px;
+  --content-max: 1180px;
+}
