@@ -6,6 +6,7 @@ services:
     name: synctech
     runtime: docker
     plan: free
+    region: virginia # same AWS region as Neon "US East (N. Virginia)": lowest latency to the database
     dockerfilePath: ./Dockerfile
     healthCheckPath: /api/health
     autoDeploy: true
