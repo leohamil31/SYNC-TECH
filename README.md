@@ -169,6 +169,16 @@ cd backend && npm test
 
 Cobrem login, cookie, token adulterado, permissões por papel, proteção contra auto-bloqueio, CRUD, normalização de URL do YouTube, publicação, progresso e todos os relatórios.
 
+## Deploy gratuito (Render + Neon)
+
+O app inteiro (API e site) roda de graça no plano free do [Render](https://render.com), com o banco no plano free do [Neon](https://neon.com).
+
+1. No Neon, crie um projeto e copie a *connection string* (`postgresql://...?sslmode=require`).
+2. Abra https://render.com/deploy?repo=https://github.com/leohamil31/SYNC-TECH, cole a string em `DATABASE_URL` e confirme. O `render.yaml` cria o serviço com `JWT_SECRET` aleatório.
+3. Para carregar os cursos de exemplo: em **Environment**, mude `RUN_SEEDS` para `true`, espere o deploy terminar e **volte para `false`**. Caso contrário, os dados são apagados a cada reinício.
+
+Limites do plano free: o serviço dorme após 15 minutos sem acesso e leva cerca de um minuto para acordar no próximo acesso.
+
 ## Deploy no Heroku
 
 ```bash
