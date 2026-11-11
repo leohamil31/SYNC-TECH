@@ -43,6 +43,7 @@
   --font-display: 'Sora', 'Geist', system-ui, sans-serif;
   --font-sans: 'Geist', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: 'Geist Mono', ui-monospace, monospace;
+  --font-serif: 'Instrument Serif', 'Times New Roman', serif; /* editorial accent words */
 
   /* Modular scale, ratio 1.25 from 15px */
   --fs-xs: 0.75rem;

@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import Accent from '../../../design-system/Accent';
 import GlassView from '../../../design-system/GlassView';
 import Icon from '../../../design-system/Icon';
 import CountUp from '../../../design-system/motion/CountUp';
@@ -18,6 +19,9 @@ import VideoThumb from '../components/VideoThumb';
 import '../learner.css';
 
 const minutes = (seconds) => Math.round(seconds / 60);
+// Greeting follows the clock: morning until noon, afternoon until 18h, evening after.
+const greetingKey = (hour = new Date().getHours()) =>
+  hour >= 5 && hour < 12 ? 'home.greetingMorning' : hour >= 12 && hour < 18 ? 'home.greetingAfternoon' : 'home.greetingEvening';
 const item = { initial: { opacity: 0, x: 24 }, animate: { opacity: 1, x: 0, transition: { duration: 0.5, ease } } };
 
 /**
@@ -125,9 +129,9 @@ export default function HomePage() {
   return (
     <div className="home">
       <header className="home-header">
-        <TextReveal className="text-shine" text={t('home.greeting', { name: user.name.split(' ')[0] })} />
+        <TextReveal className="text-shine" text={t(greetingKey(), { name: user.name.split(' ')[0] })} />
         <motion.p className="muted" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.35, duration: 0.6 }}>
-          {summary.completed_lessons ? t('home.subtitle') : t('home.subtitleNew')}
+          <Accent text={summary.completed_lessons ? t('home.subtitle') : t('home.subtitleNew')} />
         </motion.p>
       </header>
 

@@ -30,8 +30,11 @@ export default {
 
   home: {
     greeting: 'Olá, {name}',
-    subtitle: 'Seu progresso fica salvo enquanto você assiste.',
-    subtitleNew: 'Escolha um curso e aperte o play. O progresso é salvo automaticamente.',
+    greetingMorning: 'Bom dia, *{name}*',
+    greetingAfternoon: 'Boa tarde, *{name}*',
+    greetingEvening: 'Boa noite, *{name}*',
+    subtitle: 'Seu progresso fica *salvo* enquanto você assiste.',
+    subtitleNew: 'Escolha um curso e aperte o *play*. O progresso é salvo automaticamente.',
     resumeLabel: 'Continue assistindo',
     startLabel: 'Comece por aqui',
     resumeAction: 'Continuar de {time}',
@@ -100,7 +103,7 @@ export default {
 
   overview: {
     title: 'Visão geral',
-    subtitle: 'Catálogo, alunos e conclusão de aulas.',
+    subtitle: 'Catálogo, alunos e *conclusão* de aulas.',
     kpiUsers: 'Usuários',
     kpiUsersHint: '{count} alunos ativos',
     kpiCourses: 'Cursos',

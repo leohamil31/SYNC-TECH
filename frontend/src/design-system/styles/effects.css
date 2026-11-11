@@ -248,6 +248,74 @@
   .ambient-dots { -webkit-mask: none; mask: none; opacity: 0.5; }
 }
 
+/* ============ Editorial accent ============ */
+/* One word per sentence in italic serif ("on a *roll* this week"). */
+.accent {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--violet-soft);
+  padding-right: 0.06em; /* italic overhang */
+}
+h1 .accent,
+.text-reveal .accent { font-size: 1.12em; line-height: 1; }
+/* Inside the shining greeting the accent keeps its violet tone. */
+.text-reveal.text-shine .text-reveal-word > span.accent {
+  background-image: linear-gradient(100deg, var(--violet-soft) 0%, var(--violet-soft) 40%, #fff 50%, var(--violet-soft) 60%, var(--violet-soft) 100%);
+}
+
+/* ============ Odometer numbers ============ */
+.odo { display: inline-flex; }
+.odo-chars { display: inline-flex; font-variant-numeric: tabular-nums; }
+.odo-digit {
+  display: inline-block;
+  height: 1.15em;
+  overflow: hidden;
+  line-height: 1.15em;
+  -webkit-mask: linear-gradient(180deg, transparent, #000 18%, #000 82%, transparent);
+  mask: linear-gradient(180deg, transparent, #000 18%, #000 82%, transparent);
+}
+.odo-strip {
+  display: flex;
+  flex-direction: column;
+  transition-property: transform;
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+}
+.odo-strip > span { height: 1.15em; text-align: center; }
+.odo-sep { display: inline-block; line-height: 1.15em; }
+
+/* ============ Stat tiles (bento) ============ */
+.stats .stat {
+  position: relative;
+  grid-template-columns: 1fr auto;
+  grid-template-areas: 'value icon' 'label label';
+  align-items: start;
+  row-gap: var(--s-1);
+  padding: var(--s-4) var(--s-4) var(--s-4) var(--s-5);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--r-lg);
+  /* Faint violet glow in the corner, like the dashboard tiles. */
+  background: radial-gradient(90% 120% at 100% 100%, rgba(124, 58, 237, 0.2), transparent 60%), var(--glass-bg-clear);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  overflow: hidden;
+}
+.stats .stat svg {
+  box-sizing: content-box;
+  padding: 8px;
+  border-radius: 50%;
+  background: var(--violet-wash);
+}
+.stats .stat dd { font-size: clamp(1.8rem, 1.3rem + 1.6vw, 2.6rem); line-height: 1.1; letter-spacing: -0.03em; }
+.stats { gap: var(--s-3); }
+@media (max-width: 860px) {
+  .stats { gap: var(--s-2); }
+  .stats .stat { grid-template-columns: 1fr; grid-template-areas: 'value' 'label'; padding: var(--s-3); }
+  .stats .stat dd { font-size: 1.6rem; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .beam-border::before { background: none; }
   .marquee-track { animation: none; }

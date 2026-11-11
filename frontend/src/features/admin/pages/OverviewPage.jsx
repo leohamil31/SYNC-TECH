@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import GlassView from '../../../design-system/GlassView';
+import Accent from '../../../design-system/Accent';
 import Avatar from '../../../design-system/Avatar';
 import Icon from '../../../design-system/Icon';
 import CountUp from '../../../design-system/motion/CountUp';
@@ -95,7 +96,7 @@ export default function OverviewPage() {
         <div>
           <TextReveal text={t('overview.title')} />
           <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
-            {t('overview.subtitle')}
+            <Accent text={t('overview.subtitle')} />
           </motion.p>
         </div>
         <motion.div initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4 }}>
