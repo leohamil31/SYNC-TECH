@@ -5,6 +5,9 @@
 }
 
 .auth-visual {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   display: grid;
   place-content: center;
   gap: var(--s-6);
@@ -13,12 +16,18 @@
   --fs: clamp(56px, 8vw, 120px);
 }
 .auth-visual .st3d { --fs: inherit; }
+.auth-visual p.text-shine {
+  background-image: linear-gradient(100deg, var(--text-muted) 0%, var(--text-muted) 35%, #fff 50%, var(--text-muted) 65%, var(--text-muted) 100%);
+  color: transparent;
+}
 .auth-visual p {
   margin: 0 auto;
   max-width: 34ch;
   font: 300 var(--fs-md) / 1.5 var(--font-display);
   color: var(--text-muted);
 }
+
+.auth-tracks { display: grid; gap: var(--s-2); width: min(560px, 80vw); margin: var(--s-2) auto 0; }
 
 .auth-side {
   position: relative;
@@ -66,7 +75,11 @@
   .auth { grid-template-columns: 1fr; }
   .auth-visual { padding: var(--s-7) var(--s-4) 0; gap: var(--s-3); --fs: 54px; }
   .auth-visual p { font-size: var(--fs-base); }
-  .auth-side { align-content: start; padding-top: var(--s-5); }
+  .auth-visual .fluted { inset: 4% 2% 0; }
+  .auth-tracks { display: none; }
+  .auth-tracks { display: grid; gap: var(--s-2); width: min(560px, 80vw); margin: var(--s-2) auto 0; }
+
+.auth-side { align-content: start; padding-top: var(--s-5); }
   .auth-lang { top: var(--s-4); right: var(--s-4); position: fixed; }
   .auth-card { padding: var(--s-5); }
 }

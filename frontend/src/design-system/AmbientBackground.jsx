@@ -36,6 +36,7 @@ export default function AmbientBackground() {
       <span className="ambient-blob ambient-blob--a" />
       <span className="ambient-blob ambient-blob--b" />
       <span className="ambient-blob ambient-blob--c" />
+      <span className="ambient-dots" />
       <span className="ambient-spot" />
       <span className="ambient-grain" />
     </div>

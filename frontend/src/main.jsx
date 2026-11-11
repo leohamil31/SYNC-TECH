@@ -10,6 +10,7 @@ import { AuthProvider } from './features/auth/AuthProvider';
 import './design-system/styles/tokens.css';
 import './design-system/styles/base.css';
 import './design-system/styles/components.css';
+import './design-system/styles/effects.css';
 import App from './app/App';
 
 createRoot(document.getElementById('root')).render(

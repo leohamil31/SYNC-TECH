@@ -389,41 +389,46 @@ td.empty { padding: var(--s-7) var(--s-3); text-align: center; color: var(--text
 
 .toasts {
   position: fixed;
-  right: var(--s-4);
-  bottom: var(--s-4);
+  top: calc(var(--s-3) + env(safe-area-inset-top));
+  left: 50%;
   z-index: 80;
   display: grid;
+  justify-items: center;
   gap: var(--s-2);
-  width: min(360px, calc(100vw - 32px));
+  width: min(420px, calc(100vw - 24px));
+  transform: translateX(-50%);
+  pointer-events: none;
 }
+/* Dynamic Island: pure black pill, morphs open from the top center. */
 .toast {
   position: relative;
   display: flex;
   align-items: center;
   gap: var(--s-3);
-  padding: var(--s-3) var(--s-4);
-  border-radius: var(--r-md);
-  overflow: hidden;
+  max-width: 100%;
+  min-height: 44px;
+  padding: 6px 8px 6px 12px;
+  border-radius: 999px;
+  background: #000;
+  color: #fff;
   font-size: var(--fs-sm);
-  box-shadow: var(--shadow-float);
-  --glass-bg: rgba(28, 26, 36, 0.85);
+  box-shadow: 0 18px 40px -16px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  transform-origin: 50% 0;
   cursor: grab;
+  pointer-events: auto;
+  touch-action: none;
 }
-.toast-icon { flex: none; color: var(--done); }
+.toast:active { cursor: grabbing; }
+.toast-icon { display: grid; place-items: center; flex: none; color: var(--done); }
 .toast-error .toast-icon { color: var(--danger); }
-.toast-progress {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 2px;
-  transform-origin: left;
-  background: var(--gradient-brand);
-}
-.toast-close { margin-left: auto; }
-@media (max-width: 960px) {
-  .toasts { bottom: calc(var(--tabbar-h) + var(--s-4) + env(safe-area-inset-bottom)); left: 50%; right: auto; transform: translateX(-50%); }
-}
+.toast-text { flex: 1; min-width: 0; line-height: 1.35; }
+.toast-close { flex: none; color: rgba(255, 255, 255, 0.55); }
+.toast-close:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+/* Countdown ring, like a Live Activity timer. */
+.toast-timer { flex: none; width: 18px; height: 18px; transform: rotate(-90deg); }
+.toast-timer circle { fill: none; stroke-width: 2.4; stroke: rgba(255, 255, 255, 0.12); }
+.toast-timer circle + circle { stroke: var(--violet-soft); stroke-linecap: round; }
+.toast-error .toast-timer circle + circle { stroke: var(--danger); }
 
 /* ============ Keyframes ============ */
 

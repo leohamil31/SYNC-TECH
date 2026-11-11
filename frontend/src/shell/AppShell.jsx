@@ -1,5 +1,7 @@
+import { useCallback, useState } from 'react';
 import { Link, NavLink, useLocation, useNavigate, useOutlet } from 'react-router-dom';
-import { AnimatePresence, LayoutGroup, motion } from 'framer-motion';
+import { AnimatePresence, LayoutGroup, motion, useScroll, useSpring } from 'framer-motion';
+import ActionSheet from '../design-system/ActionSheet';
 import GlassView from '../design-system/GlassView';
 import Avatar from '../design-system/Avatar';
 import Icon from '../design-system/Icon';
@@ -10,6 +12,7 @@ import { useI18n } from '../shared/i18n';
 import LanguageSwitch from './LanguageSwitch';
 import DemoBanner from './DemoBanner';
 import { DEMO } from '../shared/api/client';
+import { haptic } from '../shared/lib/haptics';
 import { NAVIGATION } from './navigation';
 import './shell.css';
 
@@ -45,19 +48,91 @@ function AreaSwitch({ area }) {
   );
 }
 
+// Symbol effect: the icon of the tab you just opened does a quick bounce.
+const bounce = { scale: [1, 1.28, 0.9, 1], transition: { duration: 0.45 } };
+
 function NavItems({ items, pillId, compact = false }) {
   const { t } = useI18n();
   return items.map((item) => (
-    <NavLink key={item.to} to={item.to} end={item.end}>
+    <NavLink key={item.to} to={item.to} end={item.end} onClick={compact ? () => haptic(6) : undefined} aria-label={compact ? t(item.label) : undefined}>
       {({ isActive }) => (
         <>
           {isActive && <motion.span layoutId={pillId} className="nav-pill" transition={spring} />}
-          <Icon name={item.icon} size={compact ? 20 : 18} />
-          <span>{t(item.label)}</span>
+          {compact ? (
+            <motion.span className="tab-icon" animate={isActive ? bounce : { scale: 1 }} whileTap={{ scale: 0.82 }}>
+              <Icon name={item.icon} size={22} strokeWidth={isActive ? 2.4 : 1.8} />
+            </motion.span>
+          ) : (
+            <Icon name={item.icon} size={18} />
+          )}
+          <span className={compact ? 'sr-only' : undefined}>{t(item.label)}</span>
         </>
       )}
     </NavLink>
   ));
+}
+
+/** Thin bar at the very top that fills as the page scrolls. */
+function ScrollProgress() {
+  const { scrollYProgress } = useScroll();
+  const scaleX = useSpring(scrollYProgress, { stiffness: 200, damping: 30, mass: 0.4 });
+  return <motion.div className="scroll-progress" style={{ scaleX }} aria-hidden="true" />;
+}
+
+/** Last slot of the phone tab bar (Instagram-style avatar). Opens an action sheet with account options. */
+function AccountTab({ area }) {
+  const { t } = useI18n();
+  const { user, isAdmin, logout } = useAuth();
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+  const close = useCallback(() => setOpen(false), []);
+  const go = (to) => {
+    close();
+    navigate(to);
+  };
+
+  return (
+    <>
+      <motion.button
+        type="button"
+        className="tab-account"
+        aria-label={t('nav.account')}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        whileTap={{ scale: 0.82 }}
+        onClick={() => {
+          haptic(6);
+          setOpen(true);
+        }}
+      >
+        <Avatar name={user.name} size="sm" />
+      </motion.button>
+
+      <ActionSheet open={open} onClose={close} title={user.name} closeLabel={t('nav.close')}>
+        <div className="sheet-row">
+          <span>{t('settings.language')}</span>
+          <LanguageSwitch layoutId="lang-sheet" />
+        </div>
+        {isAdmin && (
+          <button type="button" className="sheet-action" onClick={() => go(area === 'admin' ? '/app' : '/admin')}>
+            <Icon name={area === 'admin' ? 'book' : 'shield'} size={18} />
+            {t(area === 'admin' ? 'nav.learnerArea' : 'nav.adminArea')}
+          </button>
+        )}
+        <button
+          type="button"
+          className="sheet-action is-danger"
+          onClick={() => {
+            close();
+            logout();
+          }}
+        >
+          <Icon name="logout" size={18} />
+          {t('auth.signOut')}
+        </button>
+      </ActionSheet>
+    </>
+  );
 }
 
 /**
@@ -73,6 +148,7 @@ export default function AppShell({ area }) {
 
   return (
     <div className="shell">
+      <ScrollProgress />
       <a href="#main" className="skip-link">
         {t('nav.skip')}
       </a>
@@ -127,6 +203,7 @@ export default function AppShell({ area }) {
       <LayoutGroup id="tab-nav">
         <GlassView as="nav" className="tabbar" aria-label={t('nav.main')}>
           <NavItems items={items.filter((item) => item.tabbar !== false)} pillId="tab-pill" compact />
+          <AccountTab area={area} />
         </GlassView>
       </LayoutGroup>
     </div>

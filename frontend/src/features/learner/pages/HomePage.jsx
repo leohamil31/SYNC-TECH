@@ -125,7 +125,7 @@ export default function HomePage() {
   return (
     <div className="home">
       <header className="home-header">
-        <TextReveal text={t('home.greeting', { name: user.name.split(' ')[0] })} />
+        <TextReveal className="text-shine" text={t('home.greeting', { name: user.name.split(' ')[0] })} />
         <motion.p className="muted" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.35, duration: 0.6 }}>
           {summary.completed_lessons ? t('home.subtitle') : t('home.subtitleNew')}
         </motion.p>

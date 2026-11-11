@@ -2,6 +2,7 @@ export default {
   nav: {
     main: 'Navegação principal', skip: 'Pular para o conteúdo', area: 'Área', breadcrumb: 'Você está em',
     learnerArea: 'Aprender', adminArea: 'Administrar',
+    account: 'Conta', close: 'Fechar',
     home: 'Início', catalog: 'Catálogo',
     overview: 'Visão geral', reports: 'Relatórios', courses: 'Cursos', modules: 'Módulos', lessons: 'Aulas', users: 'Usuários',
   },
